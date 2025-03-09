@@ -1,5 +1,5 @@
 // src/components/TradeCalendar.tsx
-// Place this file in your src/components directory
+// First few imports and interface definition
 import { useState, useEffect } from 'react';
 import { 
   Paper, 
@@ -23,31 +23,35 @@ import {
   IconChevronLeft, 
   IconChevronRight, 
   IconEdit,
-  IconCalendarEvent 
+  IconCalendarEvent,
+  IconRefresh
 } from '@tabler/icons-react';
 import { useSupabase } from '../contexts/SupabaseContext';
+import { useJournal } from '../contexts/JournalContext';
 import { Trade } from '../lib/supabase';
 
 interface CalendarProps {
   onEditTrade: (trade: Trade) => void;
+  journalId?: number | null;
 }
 
-export function TradeCalendar({ onEditTrade }: CalendarProps) {
+export function TradeCalendar({ onEditTrade, journalId }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const { getTrades } = useSupabase();
+  const { selectedJournal } = useJournal();
   
-  // Fetch trades on component mount
+  // Fetch trades whenever journalId changes
   useEffect(() => {
     fetchTrades();
-  }, []);
+  }, [journalId]);
   
   const fetchTrades = async () => {
     setLoading(true);
     try {
-      const tradesData = await getTrades();
+      const tradesData = await getTrades(journalId);
       setTrades(tradesData);
     } catch (error) {
       console.error('Error fetching trades:', error);
@@ -97,9 +101,10 @@ export function TradeCalendar({ onEditTrade }: CalendarProps) {
   
   // Format currency
   const formatCurrency = (value: number) => {
+    const currencyCode = selectedJournal?.base_currency || 'USD';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currencyCode,
     }).format(value);
   };
 
@@ -159,6 +164,9 @@ export function TradeCalendar({ onEditTrade }: CalendarProps) {
     const longTrades = dayTrades.filter(t => t.direction === 'long').length;
     const shortTrades = dayTrades.filter(t => t.direction === 'short').length;
     
+    // Check if this date has any trades to show
+    const hasTrades = dayTrades.length > 0 || closedTrades.length > 0;
+    
     return (
       <Box
         key={date.toString()}
@@ -184,10 +192,10 @@ export function TradeCalendar({ onEditTrade }: CalendarProps) {
           {date.getDate()}
         </Text>
         
-        {(dayTrades.length > 0 || closedTrades.length > 0) && (
+        {hasTrades ? (
           <Popover width={300} position="bottom" withArrow shadow="md">
             <Popover.Target>
-              <Box mt={4}>
+              <Box mt={4} style={{ cursor: 'pointer' }}>
                 {dayTrades.length > 0 && (
                   <Group spacing={4}>
                     {longTrades > 0 && (
@@ -332,7 +340,7 @@ export function TradeCalendar({ onEditTrade }: CalendarProps) {
               )}
             </Popover.Dropdown>
           </Popover>
-        )}
+        ) : null}
       </Box>
     );
   };
@@ -464,10 +472,22 @@ export function TradeCalendar({ onEditTrade }: CalendarProps) {
     );
   }
   
+  // Journal title
+  const journalTitle = selectedJournal ? 
+    `Trade Calendar - ${selectedJournal.name}` : 
+    "Trade Calendar";
+
   return (
-    <Paper p="md" shadow="xs" radius="md">
+    <>
       <Group position="apart" mb="md">
-        <Title order={3}>Trade Calendar</Title>
+        <Group>
+          <Title order={3}>{journalTitle}</Title>
+          <Tooltip label="Refresh">
+            <ActionIcon onClick={fetchTrades}>
+              <IconRefresh size={18} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
         
         <Group>
           <Select
@@ -506,6 +526,6 @@ export function TradeCalendar({ onEditTrade }: CalendarProps) {
       </Group>
       
       {viewMode === 'month' ? renderMonthCalendar() : renderWeekCalendar()}
-    </Paper>
+    </>
   );
 }

@@ -25,8 +25,8 @@ import { JournalProvider } from './contexts/JournalContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Navigation } from './components/Navigation';
 import { JournalSelector } from './components/JournalSelector';
-import { useState, useEffect } from 'react';
-import { IconChartBar, IconCalendar } from '@tabler/icons-react';
+import { CalendarPage } from './pages/CalendarPage';
+import { StatisticsPage } from './pages/StatisticsPage';
 
 // Define a custom theme
 const theme = createTheme({
@@ -34,28 +34,6 @@ const theme = createTheme({
   defaultRadius: 'md',
   // You can customize colors, fonts, spacing, etc. here
 });
-
-// A placeholder component for other views
-function PlaceholderView({ title }: { title: string }) {
-  return (
-    <Box p="xl" style={{ textAlign: 'center' }}>
-      <IconChartBar size={48} stroke={1.5} />
-      <Title order={2} mt="md">{title} View</Title>
-      <Text mt="md">This feature is coming soon!</Text>
-    </Box>
-  );
-}
-
-// Calendar view placeholder
-function CalendarView() {
-  return (
-    <Box p="xl" style={{ textAlign: 'center' }}>
-      <IconCalendar size={48} stroke={1.5} />
-      <Title order={2} mt="md">Trade Calendar</Title>
-      <Text mt="md">A calendar view of your trades is coming soon!</Text>
-    </Box>
-  );
-}
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
@@ -153,15 +131,15 @@ function AppContent() {
       </AppShell.Navbar>
 
       <AppShell.Main>
-        <Routes>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/journals" element={<JournalsPage />} />
-          <Route path="/statistics" element={<PlaceholderView title="Statistics" />} />
-          <Route path="/calendar" element={<CalendarView />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </AppShell.Main>
+  <Routes>
+    <Route path="/dashboard" element={<DashboardPage />} />
+    <Route path="/journals" element={<JournalsPage />} />
+    <Route path="/statistics" element={<StatisticsPage />} />
+    <Route path="/calendar" element={<CalendarPage />} />
+    <Route path="/settings" element={<SettingsPage />} />
+    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+  </Routes>
+</AppShell.Main>
     </AppShell>
   );
 }

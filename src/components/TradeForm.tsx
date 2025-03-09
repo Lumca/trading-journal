@@ -80,6 +80,8 @@ export function TradeForm({ editTrade, onSuccess, onCancel, journalId }: TradeFo
         getUserSettings()
       ]);
       
+      console.log("Fetched user settings:", settingsData);
+      
       setJournals(journalsData);
       setUserSettings(settingsData);
       
@@ -163,6 +165,54 @@ export function TradeForm({ editTrade, onSuccess, onCancel, journalId }: TradeFo
     // For other asset classes, don't include custom symbols in dropdown
     
     return symbols.map(symbol => ({ value: symbol, label: symbol }));
+  };
+
+  const getStrategyOptions = (): { value: string, label: string }[] => {
+    console.log("UserSettings for strategies:", {
+      defaultStrategies: userSettings?.default_strategies,
+      customStrategies: userSettings?.custom_strategies
+    });
+    
+    // Default fallback strategies
+    const fallbackStrategies = [
+      { value: 'swing', label: 'Swing Trading' },
+      { value: 'day', label: 'Day Trading' },
+      { value: 'position', label: 'Position Trading' },
+      { value: 'momentum', label: 'Momentum Trading' },
+      { value: 'scalp', label: 'Scalping' },
+      { value: 'breakout', label: 'Breakout Trading' },
+      { value: 'other', label: 'Other' },
+    ];
+    
+    // If no user settings, return fallback
+    if (!userSettings) {
+      console.log("No user settings found, using fallback strategies");
+      return fallbackStrategies;
+    }
+    
+    // Extract strategies from settings
+    const defaultStrategies = Array.isArray(userSettings.default_strategies) 
+      ? userSettings.default_strategies : [];
+    
+    const customStrategies = Array.isArray(userSettings.custom_strategies) 
+      ? userSettings.custom_strategies : [];
+    
+    // Combine all strategies
+    const allStrategies = [...defaultStrategies, ...customStrategies];
+    
+    console.log("Combined strategies:", allStrategies);
+    
+    // If empty, use fallback
+    if (allStrategies.length === 0) {
+      console.log("No strategies found in settings, using fallback");
+      return fallbackStrategies;
+    }
+    
+    // Return formatted strategies
+    return allStrategies.map(strategy => ({ 
+      value: strategy, 
+      label: strategy 
+    }));
   };
 
   const getIndicatorOptions = (): { value: string, label: string }[] => {
@@ -345,15 +395,15 @@ export function TradeForm({ editTrade, onSuccess, onCancel, journalId }: TradeFo
               required
               label="Strategy"
               placeholder="Select strategy"
-              data={[
-                { value: 'swing', label: 'Swing Trade' },
-                { value: 'day', label: 'Day Trade' },
-                { value: 'position', label: 'Position Trade' },
-                { value: 'momentum', label: 'Momentum Trade' },
-                { value: 'scalp', label: 'Scalp Trade' },
-                { value: 'other', label: 'Other' },
-              ]}
-              allowDeselect={false}
+              data={getStrategyOptions()}
+              searchable
+              creatable
+              getCreateLabel={(query) => `+ Add "${query}" strategy`}
+              onCreate={(query) => {
+                const strategy = query.trim();
+                // Could save to user settings here
+                return strategy;
+              }}
               {...form.getInputProps('strategy')}
             />
           </Group>

@@ -38,6 +38,7 @@ export function SettingsPage() {
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [newSymbol, setNewSymbol] = useState('');
   const [newIndicator, setNewIndicator] = useState('');
+  const [newStrategy, setNewStrategy] = useState('');
   const [activeTab, setActiveTab] = useState<string | null>('general');
   const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass>('forex');
 
@@ -50,6 +51,35 @@ export function SettingsPage() {
       newPassword: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
       confirmPassword: (value, values) => (value !== values.newPassword ? 'Passwords do not match' : null),
     },
+  });
+
+  const form = useForm<{
+    enable_registration: boolean;
+    custom_symbols: string[];
+    custom_indicators: string[];
+    custom_strategies: string[];
+    default_asset_classes: {
+      forex: string[];
+      crypto: string[];
+      stocks: string[];
+      [key: string]: string[];
+    };
+    default_indicators: string[];
+    default_strategies: string[];
+  }>({
+    initialValues: {
+      enable_registration: true,
+      custom_symbols: [],
+      custom_indicators: [],
+      custom_strategies: [],
+      default_asset_classes: {
+        forex: [],
+        crypto: [],
+        stocks: []
+      },
+      default_indicators: [],
+      default_strategies: []
+    }
   });
 
   useEffect(() => {
@@ -66,12 +96,14 @@ export function SettingsPage() {
           enable_registration: settings.enable_registration,
           custom_symbols: settings.custom_symbols || [],
           custom_indicators: settings.custom_indicators || [],
+          custom_strategies: settings.custom_strategies || [],
           default_asset_classes: settings.default_asset_classes || {
             forex: [],
             crypto: [],
             stocks: []
           },
-          default_indicators: settings.default_indicators || []
+          default_indicators: settings.default_indicators || [],
+          default_strategies: settings.default_strategies || []
         });
       }
     } catch (error) {
@@ -80,31 +112,6 @@ export function SettingsPage() {
       setLoading(false);
     }
   };
-
-  const form = useForm<{
-    enable_registration: boolean;
-    custom_symbols: string[];
-    custom_indicators: string[];
-    default_asset_classes: {
-      forex: string[];
-      crypto: string[];
-      stocks: string[];
-      [key: string]: string[];
-    };
-    default_indicators: string[];
-  }>({
-    initialValues: {
-      enable_registration: true,
-      custom_symbols: [],
-      custom_indicators: [],
-      default_asset_classes: {
-        forex: [],
-        crypto: [],
-        stocks: []
-      },
-      default_indicators: []
-    }
-  });
 
   const handleSaveSettings = async (values: typeof form.values) => {
     setSaving(true);
@@ -174,6 +181,23 @@ export function SettingsPage() {
     );
   };
 
+  const addStrategy = () => {
+    if (newStrategy.trim()) {
+      const strategy = newStrategy.trim();
+      if (!form.values.custom_strategies.includes(strategy)) {
+        form.setFieldValue('custom_strategies', [...form.values.custom_strategies, strategy]);
+      }
+      setNewStrategy('');
+    }
+  };
+
+  const removeStrategy = (strategy: string) => {
+    form.setFieldValue(
+      'custom_strategies',
+      form.values.custom_strategies.filter(s => s !== strategy)
+    );
+  };
+
   if (loading) {
     return (
       <Center style={{ height: 'calc(100vh - 60px)' }}>
@@ -191,6 +215,7 @@ export function SettingsPage() {
           <Tabs.Tab value="general">General</Tabs.Tab>
           <Tabs.Tab value="symbols">Symbols & Assets</Tabs.Tab>
           <Tabs.Tab value="indicators">Indicators</Tabs.Tab>
+          <Tabs.Tab value="strategies">Strategies</Tabs.Tab>
           <Tabs.Tab value="security">Security</Tabs.Tab>
         </Tabs.List>
 
@@ -286,7 +311,7 @@ export function SettingsPage() {
 
                 <Tabs.Panel value="stocks">
                   <Stack>
-                    <Text fw={500}>Default Stock Symbols</Text>
+<Text fw={500}>Default Stock Symbols</Text>
                     <MultiSelect
                       data={[
                         { value: 'AAPL', label: 'AAPL - Apple Inc.' },
@@ -415,6 +440,79 @@ export function SettingsPage() {
                           compact
                         >
                           {indicator}
+                        </Button>
+                      ))}
+                    </Group>
+                  )}
+                </Box>
+              </Stack>
+              
+              <Group position="right" mt="xl">
+                <Button type="submit" loading={saving}>
+                  Save Settings
+                </Button>
+              </Group>
+            </Card>
+          </form>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="strategies">
+          <form onSubmit={form.onSubmit(handleSaveSettings)}>
+            <Card shadow="sm" p="lg" radius="md" withBorder mb="lg">
+              <Title order={3} mb="md">Trading Strategies</Title>
+              
+              <Stack>
+                <Text fw={500}>Default Strategies</Text>
+                <MultiSelect
+                  data={[
+                    { value: 'swing', label: 'Swing Trading' },
+                    { value: 'day', label: 'Day Trading' },
+                    { value: 'position', label: 'Position Trading' },
+                    { value: 'momentum', label: 'Momentum Trading' },
+                    { value: 'scalp', label: 'Scalping' },
+                    { value: 'breakout', label: 'Breakout Trading' },
+                    { value: 'trend', label: 'Trend Following' },
+                    { value: 'reversal', label: 'Reversal Trading' },
+                    { value: 'mean-reversion', label: 'Mean Reversion' },
+                    { value: 'news', label: 'News-Based Trading' }
+                  ]}
+                  placeholder="Select default strategies"
+                  searchable
+                  value={form.values.default_strategies || []}
+                  onChange={(value) => form.setFieldValue('default_strategies', value)}
+                />
+                
+                <Divider my="md" label="Custom Strategies" labelPosition="center" />
+                
+                <Group>
+                  <TextInput
+                    placeholder="Add custom strategy"
+                    value={newStrategy}
+                    onChange={(e) => setNewStrategy(e.target.value)}
+                    style={{ flexGrow: 1 }}
+                  />
+                  <Button onClick={addStrategy} leftIcon={<IconPlus size={16} />}>
+                    Add
+                  </Button>
+                </Group>
+                
+                <Box>
+                  {!form.values.custom_strategies || form.values.custom_strategies.length === 0 ? (
+                    <Text c="dimmed" size="sm">No custom strategies added yet.</Text>
+                  ) : (
+                    <Group mt="xs">
+                      {form.values.custom_strategies.map((strategy) => (
+                        <Button 
+                          key={strategy}
+                          variant="outline"
+                          rightIcon={
+                            <ActionIcon size="xs" color="red" onClick={() => removeStrategy(strategy)}>
+                              <IconTrash size={14} />
+                            </ActionIcon>
+                          }
+                          compact
+                        >
+                          {strategy}
                         </Button>
                       ))}
                     </Group>

@@ -27,6 +27,8 @@ export interface UserSettings {
     };
     custom_indicators: string[];
     default_indicators: string[];
+    custom_strategies: string[];
+    default_strategies: string[];
 }
 
 export interface TradeIndicator {

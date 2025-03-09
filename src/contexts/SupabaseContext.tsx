@@ -394,11 +394,37 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   // Function to update user settings
   const updateUserSettings = async (settings: Partial<UserSettings>): Promise<UserSettings | null> => {
-    if (!user) return null;
+  if (!user) return null;
 
+  try {
+    // First, get the current settings to know what fields exist
+    const { data: currentSettings, error: fetchError } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching current user settings:', fetchError);
+      return null;
+    }
+
+    // Create an update object with only the fields that exist in the database
+    const updateObj: any = {};
+    
+    // For each property in settings, only add it to updateObj if it exists in currentSettings
+    for (const key in settings) {
+      if (key in currentSettings || key === 'user_id') {
+        updateObj[key] = settings[key as keyof typeof settings];
+      } else {
+        console.warn(`Field '${key}' not found in user_settings table, skipping.`);
+      }
+    }
+
+    // Update settings with only the valid fields
     const { data, error } = await supabase
       .from('user_settings')
-      .update(settings)
+      .update(updateObj)
       .eq('user_id', user.id)
       .select()
       .single();
@@ -409,7 +435,11 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     }
 
     return data as UserSettings;
-  };
+  } catch (error) {
+    console.error('Exception while updating user settings:', error);
+    return null;
+  }
+};
 
   // Function to get trade indicators
   const getTradeIndicators = async (tradeId: number): Promise<TradeIndicator[]> => {

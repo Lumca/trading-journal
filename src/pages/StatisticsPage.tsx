@@ -195,40 +195,53 @@ export function StatisticsPage() {
 
   // Get win/loss ratio by strategy
   const getWinLossByStrategy = () => {
-    const strategyStats: { [key: string]: { wins: number, losses: number } } = {};
-    
-    trades.forEach(trade => {
-      if (trade.status === 'closed') {
-        const strategy = trade.strategy || 'Unknown';
-        
-        if (!strategyStats[strategy]) {
-          strategyStats[strategy] = { wins: 0, losses: 0 };
-        }
-        
-        if (trade.profit_loss && trade.profit_loss > 0) {
-          strategyStats[strategy].wins++;
-        } else if (trade.profit_loss && trade.profit_loss < 0) {
-          strategyStats[strategy].losses++;
-        }
-      }
-    });
-    
-    const chartData = Object.keys(strategyStats).map(strategy => {
-      const { wins, losses } = strategyStats[strategy];
-      const total = wins + losses;
-      const winRate = total > 0 ? (wins / total) * 100 : 0;
+  // Initialize with all strategies from settings
+  const allStrategies = [
+    ...(userSettings?.default_strategies || []),
+    ...(userSettings?.custom_strategies || [])
+  ];
+  
+  const strategyStats: { [key: string]: { wins: number, losses: number } } = {};
+  
+  // Pre-populate with all known strategies to ensure they appear even if no trades use them
+  allStrategies.forEach(strategy => {
+    strategyStats[strategy] = { wins: 0, losses: 0 };
+  });
+  
+  // Count trades for each strategy
+  trades.forEach(trade => {
+    if (trade.status === 'closed') {
+      const strategy = trade.strategy || 'Unknown';
       
-      return {
-        strategy,
-        wins,
-        losses,
-        total,
-        winRate: Math.round(winRate)
-      };
-    });
+      if (!strategyStats[strategy]) {
+        strategyStats[strategy] = { wins: 0, losses: 0 };
+      }
+      
+      if (trade.profit_loss && trade.profit_loss > 0) {
+        strategyStats[strategy].wins++;
+      } else if (trade.profit_loss && trade.profit_loss < 0) {
+        strategyStats[strategy].losses++;
+      }
+    }
+  });
+  
+  const chartData = Object.keys(strategyStats).map(strategy => {
+    const { wins, losses } = strategyStats[strategy];
+    const total = wins + losses;
+    const winRate = total > 0 ? (wins / total) * 100 : 0;
     
-    return chartData.sort((a, b) => b.total - a.total);
-  };
+    return {
+      strategy,
+      wins,
+      losses,
+      total,
+      winRate: Math.round(winRate)
+    };
+  });
+  
+  // Sort by most frequently used
+  return chartData.sort((a, b) => b.total - a.total);
+};
 
   // Get asset class distribution by count
   const getAssetClassDistribution = () => {

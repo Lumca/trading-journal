@@ -21,6 +21,9 @@ type SupabaseContextType = {
   getTradeIndicators: (tradeId: number) => Promise<TradeIndicator[]>;
   addTradeIndicator: (indicator: { trade_id: number; indicator_name: string }) => Promise<TradeIndicator | null>;
   deleteTradeIndicator: (id: number) => Promise<void>;
+  uploadTradeScreenshot: (tradeId: number, file: File) => Promise<{ id: string, url: string } | null>;
+  deleteTradeScreenshot: (screenshotId: string) => Promise<boolean>;
+  getTradeScreenshots: (tradeId: number) => Promise<any[]>;
 };
 
 export interface TradeStats {
@@ -490,6 +493,178 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     }
   };
 
+
+// Function to upload a trade screenshot
+const uploadTradeScreenshot = async (tradeId: number, file: File): Promise<{ id: string, url: string } | null> => {
+  if (!user) return null;
+  
+  try {
+    // 1. Check if the user has access to the trade
+    const { data: tradeData, error: tradeError } = await supabase
+      .from('trades')
+      .select('user_id')
+      .eq('id', tradeId)
+      .single();
+      
+    if (tradeError) {
+      console.error('Error checking trade access:', tradeError);
+      return null;
+    }
+    
+    if (tradeData.user_id !== user.id) {
+      console.error('User does not have permission to upload to this trade');
+      return null;
+    }
+    
+    // 2. Generate a unique file name with a path that includes user ID
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    const filePath = `${user.id}/${tradeId}/${fileName}`;
+    
+    console.log('Uploading to path:', filePath);
+    
+    // 3. Upload file to storage
+    const { error: uploadError } = await supabase.storage
+      .from('screenshots')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+      
+    if (uploadError) {
+      console.error('Error uploading screenshot to storage:', uploadError);
+      return null;
+    }
+    
+    // 4. Get public URL
+    const { data: urlData } = supabase.storage
+      .from('screenshots')
+      .getPublicUrl(filePath);
+      
+    if (!urlData || !urlData.publicUrl) {
+      console.error('Error getting public URL for screenshot');
+      return null;
+    }
+    
+    const publicUrl = urlData.publicUrl;
+    console.log('File uploaded successfully. Public URL:', publicUrl);
+    
+    // 5. Create record in database - notice we removed the display_size field
+    const { data: screenshotData, error: insertError } = await supabase
+      .from('trade_screenshots')
+      .insert([
+        { 
+          trade_id: tradeId, 
+          user_id: user.id,
+          file_path: filePath,
+          file_name: file.name
+        }
+      ])
+      .select('id')
+      .single();
+      
+    if (insertError) {
+      console.error('Error saving screenshot record to database:', insertError);
+      
+      // 6. If database insert fails, clean up the uploaded file
+      const { error: cleanupError } = await supabase.storage
+        .from('screenshots')
+        .remove([filePath]);
+        
+      if (cleanupError) {
+        console.error('Error cleaning up orphaned file:', cleanupError);
+      }
+      
+      return null;
+    }
+    
+    return {
+      id: screenshotData.id,
+      url: publicUrl
+    };
+  } catch (error) {
+    console.error('Exception uploading screenshot:', error);
+    return null;
+  }
+};
+
+// Function to delete a trade screenshot
+const deleteTradeScreenshot = async (screenshotId: string): Promise<boolean> => {
+  if (!user) return false;
+  
+  try {
+    // First get the screenshot record to get the file path
+    const { data, error } = await supabase
+      .from('trade_screenshots')
+      .select('file_path')
+      .eq('id', screenshotId)
+      .single();
+      
+    if (error) {
+      console.error('Error getting screenshot record:', error);
+      return false;
+    }
+    
+    // Delete the file from storage
+    const { error: storageError } = await supabase.storage
+      .from('screenshots')
+      .remove([data.file_path]);
+      
+    if (storageError) {
+      console.error('Error deleting screenshot file:', storageError);
+    }
+    
+    // Delete the database record
+    const { error: deleteError } = await supabase
+      .from('trade_screenshots')
+      .delete()
+      .eq('id', screenshotId);
+      
+    if (deleteError) {
+      console.error('Error deleting screenshot record:', deleteError);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Exception deleting screenshot:', error);
+    return false;
+  }
+};
+
+// Function to get trade screenshots
+const getTradeScreenshots = async (tradeId: number): Promise<any[]> => {
+  if (!user) return [];
+  
+  try {
+    const { data, error } = await supabase
+      .from('trade_screenshots')
+      .select('*')
+      .eq('trade_id', tradeId)
+      .order('created_at', { ascending: true });
+      
+    if (error) {
+      console.error('Error fetching trade screenshots:', error);
+      return [];
+    }
+    
+    // Add public URLs to the screenshot records
+    return data.map(screenshot => {
+      const { data: urlData } = supabase.storage
+        .from('screenshots')
+        .getPublicUrl(screenshot.file_path);
+        
+      return {
+        ...screenshot,
+        url: urlData.publicUrl
+      };
+    });
+  } catch (error) {
+    console.error('Exception fetching screenshots:', error);
+    return [];
+  }
+};
+
   const value = {
     getTrades,
     addTrade,
@@ -506,7 +681,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     updateUserSettings,
     getTradeIndicators,
     addTradeIndicator,
-    deleteTradeIndicator
+    deleteTradeIndicator,
+    uploadTradeScreenshot,
+    deleteTradeScreenshot,
+    getTradeScreenshots,
   };
 
   return (

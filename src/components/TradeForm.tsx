@@ -25,6 +25,7 @@ import { useSupabase } from '../contexts/SupabaseContext';
 import { Trade, NewTrade } from '../lib/supabase';
 import { Journal, UserSettings } from '../lib/types';
 import { FaTimes } from 'react-icons/fa';
+import { TradeScreenshots, Screenshot } from './TradeScreenshots';
 
 interface TradeFormProps {
   editTrade?: Trade;
@@ -34,11 +35,21 @@ interface TradeFormProps {
 }
 
 export function TradeForm({ editTrade, onSuccess, onCancel, journalId }: TradeFormProps) {
-  const { addTrade, updateTrade, getJournals, getUserSettings, getTradeIndicators, addTradeIndicator, deleteTradeIndicator } = useSupabase();
-  const [isOpen, setIsOpen] = useState(true);
+  const { 
+    addTrade, 
+    updateTrade, 
+    getJournals, 
+    getUserSettings, 
+    getTradeIndicators, 
+    addTradeIndicator, 
+    deleteTradeIndicator,
+    getTradeScreenshots
+  } = useSupabase();
+  
   const [journals, setJournals] = useState<Journal[]>([]);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [selectedIndicators, setSelectedIndicators] = useState<string[]>([]);
+  const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [loading, setLoading] = useState(false);
 
   const form = useForm({
@@ -112,6 +123,16 @@ export function TradeForm({ editTrade, onSuccess, onCancel, journalId }: TradeFo
         // Fetch indicators if editing
         const indicators = await getTradeIndicators(editTrade.id);
         setSelectedIndicators(indicators.map(ind => ind.indicator_name));
+        
+        // Fetch screenshots if editing
+        const screenshotsData = await getTradeScreenshots(editTrade.id);
+        const formattedScreenshots: Screenshot[] = screenshotsData.map(s => ({
+          id: s.id,
+          url: s.url,
+          tradeId: s.trade_id,
+          fileName: s.file_name,
+        }));
+        setScreenshots(formattedScreenshots);
       } else if (journalId) {
         // If creating a new trade with a preselected journal
         form.setFieldValue('journal_id', journalId);
@@ -287,6 +308,7 @@ export function TradeForm({ editTrade, onSuccess, onCancel, journalId }: TradeFo
       }
 
       form.reset();
+      setScreenshots([]);
       onSuccess();
     } catch (error) {
       console.error('Error saving trade:', error);
@@ -461,6 +483,20 @@ export function TradeForm({ editTrade, onSuccess, onCancel, journalId }: TradeFo
             minRows={3}
             {...form.getInputProps('notes')}
           />
+          
+          <Divider label="Screenshots" labelPosition="center" />
+          
+          {editTrade ? (
+            <TradeScreenshots
+              tradeId={editTrade.id}
+              screenshots={screenshots}
+              onScreenshotsChange={setScreenshots}
+            />
+          ) : (
+            <Text c="dimmed" size="sm" ta="center" py="sm">
+              You can add screenshots after saving the trade.
+            </Text>
+          )}
 
           <Group position="right" mt="md">
             <Button variant="outline" onClick={onCancel}>

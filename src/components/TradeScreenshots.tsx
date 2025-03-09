@@ -355,10 +355,9 @@ export function TradeScreenshots({ tradeId, screenshots, onScreenshotsChange }: 
   onClose={() => setShowResizeModal(false)}
   title="Resize Options"
   size="md"
-  scrollAreaComponent={Modal.NativeScrollArea}
   centered
 >
-  <Stack spacing="md" pb={5}>
+  <Stack pb={5}>
     <Select
       label="Quality Preset"
       placeholder="Select a preset"

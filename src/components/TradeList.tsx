@@ -4,15 +4,16 @@ import { Table, Group, Badge, Button, Text, ActionIcon, Tooltip, Box } from '@ma
 import { useSupabase } from '../contexts/SupabaseContext';
 import { useJournal } from '../contexts/JournalContext';
 import { Trade } from '../lib/supabase';
-import { FaEdit, FaTrash } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaEye } from 'react-icons/fa';
 
 interface TradeListProps {
   onEditTrade: (trade: Trade) => void;
+  onViewTrade?: (trade: Trade) => void;
   journalId?: number | null;
   onTradeUpdated?: () => void;
 }
 
-export function TradeList({ onEditTrade, journalId, onTradeUpdated }: TradeListProps) {
+export function TradeList({ onEditTrade, onViewTrade, journalId, onTradeUpdated }: TradeListProps) {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const { getTrades, deleteTrade } = useSupabase();
@@ -112,6 +113,13 @@ export function TradeList({ onEditTrade, journalId, onTradeUpdated }: TradeListP
             </Table.Td>
             <Table.Td>
               <Group gap="xs">
+                {onViewTrade && (
+                  <Tooltip label="View">
+                    <ActionIcon variant="subtle" color="gray" onClick={() => onViewTrade(trade)}>
+                      <FaEye />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
                 <Tooltip label="Edit">
                   <ActionIcon variant="subtle" color="blue" onClick={() => onEditTrade(trade)}>
                     <FaEdit />

@@ -22,9 +22,9 @@ import { JournalList } from '../components/JournalList';
 import { JournalForm } from '../components/JournalForm';
 import { TradeList } from '../components/TradeList';
 import { TradeForm } from '../components/TradeForm';
+import { TradeView } from '../components/TradeView';
 import { Trade } from '../lib/supabase';
 import { IconPlus } from '@tabler/icons-react';
-import { TradeStatsDisplay } from '../components/TradeStats';
 
 export function JournalsPage() {
   const [showJournalForm, setShowJournalForm] = useState(false);
@@ -32,6 +32,7 @@ export function JournalsPage() {
   const [selectedJournalForView, setSelectedJournalForView] = useState<Journal | null>(null);
   const [editJournal, setEditJournal] = useState<Journal | null>(null);
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
+  const [viewTrade, setViewTrade] = useState<Trade | null>(null);
   const [loading, setLoading] = useState(false);
   const [journalStats, setJournalStats] = useState<any>(null);
   const [view, setView] = useState<'journals' | 'trades'>('journals');
@@ -71,7 +72,13 @@ export function JournalsPage() {
 
   const handleEditTrade = (trade: Trade) => {
     setEditTrade(trade);
+    setViewTrade(null);
     setShowTradeForm(true);
+  };
+
+  const handleViewTrade = (trade: Trade) => {
+    setViewTrade(trade);
+    setShowTradeForm(false);
   };
 
   const handleFormSuccess = () => {
@@ -79,6 +86,7 @@ export function JournalsPage() {
     setShowTradeForm(false);
     setEditJournal(null);
     setEditTrade(null);
+    setViewTrade(null);
     
     // Refresh journals in the context
     refetchJournals();
@@ -94,11 +102,18 @@ export function JournalsPage() {
     setShowTradeForm(false);
     setEditJournal(null);
     setEditTrade(null);
+    setViewTrade(null);
+  };
+
+  const handleBackFromView = () => {
+    setViewTrade(null);
   };
 
   const handleBackToJournals = () => {
     setSelectedJournalForView(null);
     setView('journals');
+    setViewTrade(null);
+    setShowTradeForm(false);
   };
 
   const formatCurrency = (value: number) => {
@@ -142,38 +157,94 @@ export function JournalsPage() {
         </>
       ) : (
         <>
-         <Group position="apart" mb="xl">
-  <Group>
-    <Button variant="outline" onClick={handleBackToJournals}>
-      Back to Journals
-    </Button>
-    <Title order={1}>
-      {selectedJournalForView?.name}
-      {' '}
-      <Badge color={selectedJournalForView?.is_active ? 'green' : 'gray'} size="lg">
-        {selectedJournalForView?.is_active ? 'Active' : 'Inactive'}
-      </Badge>
-    </Title>
-  </Group>
-  <Button 
-    leftIcon={<IconPlus size={16} />}
-    onClick={() => setShowTradeForm(true)}
-    disabled={showTradeForm}
-  >
-    Add Trade
-  </Button>
-</Group>
+          <Group position="apart" mb="xl">
+            <Group>
+              <Button variant="outline" onClick={handleBackToJournals}>
+                Back to Journals
+              </Button>
+              <Title order={1}>
+                {selectedJournalForView?.name}
+                {' '}
+                <Badge color={selectedJournalForView?.is_active ? 'green' : 'gray'} size="lg">
+                  {selectedJournalForView?.is_active ? 'Active' : 'Inactive'}
+                </Badge>
+              </Title>
+            </Group>
+            <Button 
+              leftIcon={<IconPlus size={16} />}
+              onClick={() => {
+                setViewTrade(null);
+                setShowTradeForm(true);
+              }}
+              disabled={showTradeForm || !!viewTrade}
+            >
+              Add Trade
+            </Button>
+          </Group>
 
           {selectedJournalForView && (
-  <>
-    {loading ? (
-      <Center my="xl">
-        <Loader size="lg" />
-      </Center>
-    ) : (
-      <TradeStatsDisplay stats={journalStats} formatCurrency={formatCurrency} />
-    )}
-
+            <>
+              {loading ? (
+                <Center my="xl">
+                  <Loader size="lg" />
+                </Center>
+              ) : (
+                <Grid mb="xl">
+                  <Grid.Col span={{ base: 12, md: 4 }}>
+                    <Card shadow="sm" padding="lg" radius="md" withBorder>
+                      <Text ta="center" fz="lg" fw={500}>Win Rate</Text>
+                      <Text ta="center" fz="xl" fw={700} c={journalStats?.win_rate >= 50 ? 'green' : 'red'}>
+                        {journalStats?.win_rate?.toFixed(1) || 0}%
+                      </Text>
+                      <Group position="center" spacing="sm" mt="sm" style={{ justifyContent: 'center' }}>
+                        <Badge color="green">{journalStats?.winning_trades || 0} wins</Badge>
+                        <Badge color="red">{journalStats?.losing_trades || 0} losses</Badge>
+                      </Group>
+                      <Text ta="center" size="xs" mt="xs" c="dimmed">
+                        Based on closed trades only
+                      </Text>
+                    </Card>
+                  </Grid.Col>
+                  
+                  <Grid.Col span={{ base: 12, md: 4 }}>
+                    <Card shadow="sm" padding="lg" radius="md" withBorder>
+                      <Text ta="center" fz="lg" fw={500}>Total Trades</Text>
+                      <Text ta="center" fz="xl" fw={700}>
+                        {journalStats?.total_trades || 0}
+                      </Text>
+                      <Group position="center" mt="sm" style={{ justifyContent: 'center' }}>
+                        <Badge color="blue">{journalStats?.open_trades || 0} open positions</Badge>
+                        <Badge color="gray">{journalStats ? (journalStats.total_trades - journalStats.open_trades) : 0} closed</Badge>
+                      </Group>
+                    </Card>
+                  </Grid.Col>
+                  
+                  <Grid.Col span={{ base: 12, md: 4 }}>
+                    <Card shadow="sm" padding="lg" radius="md" withBorder>
+                      <Text ta="center" fz="lg" fw={500}>Total P/L</Text>
+                      <Text ta="center" fz="xl" fw={700} 
+                        c={journalStats?.total_profit_loss >= 0 ? 'green' : 'red'}>
+                        {formatCurrency(journalStats?.total_profit_loss || 0)}
+                      </Text>
+                      <Group position="center" spacing="sm" mt="sm" style={{ justifyContent: 'center' }}>
+                        <Group spacing={4}>
+                          <Text size="sm" fw={500}>Best:</Text>
+                          <Text size="sm" c="green">
+                            {formatCurrency(journalStats?.largest_win || 0)}
+                          </Text>
+                        </Group>
+                        <Text size="sm">•</Text>
+                        <Group spacing={4}>
+                          <Text size="sm" fw={500}>Worst:</Text>
+                          <Text size="sm" c="red">
+                            {formatCurrency(Math.abs(journalStats?.largest_loss || 0))}
+                          </Text>
+                        </Group>
+                      </Group>
+                    </Card>
+                  </Grid.Col>
+                </Grid>
+              )}
 
               {showTradeForm ? (
                 <TradeForm
@@ -182,10 +253,17 @@ export function JournalsPage() {
                   onCancel={handleFormCancel}
                   journalId={selectedJournalForView.id}
                 />
+              ) : viewTrade ? (
+                <TradeView
+                  trade={viewTrade}
+                  onBack={handleBackFromView}
+                  onEdit={handleEditTrade}
+                />
               ) : (
                 <Paper p="md" shadow="xs" radius="md">
                   <TradeList 
                     onEditTrade={handleEditTrade}
+                    onViewTrade={handleViewTrade}
                     journalId={selectedJournalForView.id}
                     onTradeUpdated={fetchJournalStats}
                   />

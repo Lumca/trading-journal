@@ -8,32 +8,28 @@ import {
   Stack, 
   Paper, 
   Text, 
-  Grid, 
-  Card, 
-  RingProgress,
-  useMantineTheme,
-  Box,
+  Badge,
   Loader,
-  Center,
-  Badge
+  Center
 } from '@mantine/core';
 import { TradeList } from '../components/TradeList';
 import { TradeForm } from '../components/TradeForm';
+import { TradeView } from '../components/TradeView';
+import { TradeStatsDisplay } from '../components/TradeStats';
 import { useSupabase, TradeStats } from '../contexts/SupabaseContext';
 import { useJournal } from '../contexts/JournalContext';
 import { Trade } from '../lib/supabase';
 import { FaPlus } from 'react-icons/fa';
-import { TradeStatsDisplay } from '../components/TradeStats';
 
 export function DashboardPage() {
   const [showForm, setShowForm] = useState(false);
   const [editTrade, setEditTrade] = useState<Trade | undefined>(undefined);
+  const [viewTrade, setViewTrade] = useState<Trade | undefined>(undefined);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [stats, setStats] = useState<TradeStats | null>(null);
   const [loading, setLoading] = useState(true);
   const { getTrades, getTradeStats } = useSupabase();
   const { selectedJournalId, selectedJournal } = useJournal();
-  const theme = useMantineTheme();
 
   useEffect(() => {
     fetchData();
@@ -58,7 +54,17 @@ export function DashboardPage() {
 
   const handleEditTrade = (trade: Trade) => {
     setEditTrade(trade);
+    setViewTrade(undefined); // Close view if open
     setShowForm(true);
+  };
+
+  const handleViewTrade = (trade: Trade) => {
+    setViewTrade(trade);
+    setShowForm(false);
+  };
+
+  const handleBackFromView = () => {
+    setViewTrade(undefined);
   };
 
   const handleFormSuccess = () => {
@@ -72,13 +78,13 @@ export function DashboardPage() {
     setEditTrade(undefined);
   };
 
-const formatCurrency = (value: number) => {
-  const currencyCode = selectedJournal?.base_currency || 'USD';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode,
-  }).format(value);
-};
+  const formatCurrency = (value: number) => {
+    const currencyCode = selectedJournal?.base_currency || 'USD';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currencyCode,
+    }).format(value);
+  };
 
   if (loading) {
     return (
@@ -88,39 +94,41 @@ const formatCurrency = (value: number) => {
     );
   }
 
-const journalTitle = selectedJournal ? (
-  <Group>
+  const journalTitle = selectedJournal ? (
+    <Group>
+      <Title order={1}>Trading Journal</Title>
+      <Badge 
+        color={selectedJournal.is_active ? 'green' : 'gray'} 
+        size="lg" 
+        variant="filled"
+      >
+        {selectedJournal.name}
+      </Badge>
+    </Group>
+  ) : (
     <Title order={1}>Trading Journal</Title>
-    <Badge 
-      color={selectedJournal.is_active ? 'green' : 'gray'} 
-      size="lg" 
-      variant="filled"
-    >
-      {selectedJournal.name}
-    </Badge>
-  </Group>
-) : (
-  <Title order={1}>Trading Journal</Title>
-);
+  );
 
   return (
     <Container size="xl" py="xl">
       <Stack spacing="xl">
         {journalTitle}
 
+        <TradeStatsDisplay stats={stats} formatCurrency={formatCurrency} />
 
-<TradeStatsDisplay stats={stats} formatCurrency={formatCurrency} />
-
-<Group position="apart" mt="xl">
-  <Title order={2}>Trades</Title>
-  <Button 
-    leftIcon={<FaPlus size={14} />} 
-    onClick={() => setShowForm(true)}
-    disabled={showForm}
-  >
-    Add Trade
-  </Button>
-</Group>
+        <Group position="apart" mt="md">
+          <Title order={2}>Trades</Title>
+          <Button 
+            leftIcon={<FaPlus size={14} />} 
+            onClick={() => {
+              setViewTrade(undefined);
+              setShowForm(true);
+            }}
+            disabled={showForm || !!viewTrade}
+          >
+            Add Trade
+          </Button>
+        </Group>
 
         {showForm ? (
           <TradeForm 
@@ -129,10 +137,17 @@ const journalTitle = selectedJournal ? (
             onCancel={handleFormCancel}
             journalId={selectedJournalId}
           />
+        ) : viewTrade ? (
+          <TradeView 
+            trade={viewTrade}
+            onBack={handleBackFromView}
+            onEdit={handleEditTrade}
+          />
         ) : (
           <Paper p="md" shadow="xs" radius="md">
             <TradeList 
-              onEditTrade={handleEditTrade} 
+              onEditTrade={handleEditTrade}
+              onViewTrade={handleViewTrade}
               journalId={selectedJournalId}
               onTradeUpdated={fetchData}
             />

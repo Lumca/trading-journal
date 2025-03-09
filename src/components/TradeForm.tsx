@@ -87,7 +87,10 @@ export function TradeForm({ editTrade, onSuccess, onCancel, journalId }: TradeFo
         // Parse dates from strings to Date objects
         const entryDate = new Date(editTrade.entry_date);
         const exitDate = editTrade.exit_date ? new Date(editTrade.exit_date) : null;
-
+        
+        // Determine asset class for the trade
+        const assetClass = determineAssetClass(editTrade.symbol, settingsData);
+        
         form.setValues({
           symbol: editTrade.symbol,
           entry_date: entryDate,
@@ -101,29 +104,41 @@ export function TradeForm({ editTrade, onSuccess, onCancel, journalId }: TradeFo
           notes: editTrade.notes || '',
           tags: editTrade.tags ? editTrade.tags.join(', ') : '',
           journal_id: editTrade.journal_id || null,
-          asset_class: guessAssetClass(editTrade.symbol),
+          asset_class: assetClass,
         });
         
         // Fetch indicators if editing
         const indicators = await getTradeIndicators(editTrade.id);
         setSelectedIndicators(indicators.map(ind => ind.indicator_name));
+      } else if (journalId) {
+        // If creating a new trade with a preselected journal
+        form.setFieldValue('journal_id', journalId);
       }
     } catch (error) {
       console.error('Error fetching form data:', error);
     }
   };
 
-  const guessAssetClass = (symbol: string): string => {
-    if (!userSettings) return 'stocks';
+  const determineAssetClass = (symbol: string, settings: UserSettings | null): string => {
+    if (!settings) return 'stocks';
     
-    // Check forex pairs
-    if (userSettings.default_asset_classes.forex.some(pair => pair === symbol)) {
-      return 'forex';
+    // Check in all asset classes
+    for (const [assetClass, symbols] of Object.entries(settings.default_asset_classes)) {
+      if (symbols.includes(symbol)) {
+        return assetClass;
+      }
     }
     
-    // Check crypto pairs
-    if (userSettings.default_asset_classes.crypto.some(pair => pair === symbol)) {
-      return 'crypto';
+    // Check if it's a custom symbol
+    if (settings.custom_symbols?.includes(symbol)) {
+      return 'custom';
+    }
+    
+    // Make educated guesses based on symbol format
+    if (symbol.includes('/')) {
+      // Symbols with slashes are typically forex or crypto
+      return symbol.includes('BTC') || symbol.includes('ETH') || 
+             symbol.includes('XRP') || symbol.includes('LTC') ? 'crypto' : 'forex';
     }
     
     // Default to stocks
@@ -141,10 +156,11 @@ export function TradeForm({ editTrade, onSuccess, onCancel, journalId }: TradeFo
       symbols = userSettings.default_asset_classes[assetClass];
     }
     
-    // Add custom symbols
-    if (userSettings.custom_symbols) {
-      symbols = [...symbols, ...userSettings.custom_symbols];
+    // Add custom symbols for "custom" asset class
+    if (assetClass === 'custom' && userSettings.custom_symbols) {
+      symbols = [...userSettings.custom_symbols];
     }
+    // For other asset classes, don't include custom symbols in dropdown
     
     return symbols.map(symbol => ({ value: symbol, label: symbol }));
   };

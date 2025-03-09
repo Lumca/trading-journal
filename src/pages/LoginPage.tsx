@@ -158,8 +158,12 @@ export function LoginPage() {
               <Anchor
                 component="button"
                 size="sm"
-                onClick={() => toggleMode('forgotPassword')}
-                align="right"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleMode('forgotPassword');
+                }}
+                style={{ alignSelf: 'flex-end' }}
+                type="button"
               >
                 Forgot password?
               </Anchor>

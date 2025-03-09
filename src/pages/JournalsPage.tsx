@@ -13,43 +13,44 @@ import {
   Badge,
   Box,
   Center,
-  Loader,
-  Tabs,
-  ActionIcon,
-  Tooltip
+  Loader
 } from '@mantine/core';
 import { useSupabase } from '../contexts/SupabaseContext';
-import { Journal, JournalStats } from '../lib/types';
+import { useJournal } from '../contexts/JournalContext';
+import { Journal } from '../lib/types';
 import { JournalList } from '../components/JournalList';
 import { JournalForm } from '../components/JournalForm';
 import { TradeList } from '../components/TradeList';
 import { TradeForm } from '../components/TradeForm';
 import { Trade } from '../lib/supabase';
-import { IconPlus, IconBook, IconList } from '@tabler/icons-react';
+import { IconPlus } from '@tabler/icons-react';
+import { TradeStatsDisplay } from '../components/TradeStats';
 
 export function JournalsPage() {
   const [showJournalForm, setShowJournalForm] = useState(false);
   const [showTradeForm, setShowTradeForm] = useState(false);
-  const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
+  const [selectedJournalForView, setSelectedJournalForView] = useState<Journal | null>(null);
   const [editJournal, setEditJournal] = useState<Journal | null>(null);
   const [editTrade, setEditTrade] = useState<Trade | null>(null);
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState<'journals' | 'trades'>('journals');
-  const { getJournalStats } = useSupabase();
   const [journalStats, setJournalStats] = useState<any>(null);
+  const [view, setView] = useState<'journals' | 'trades'>('journals');
+  
+  const { getJournalStats } = useSupabase();
+  const { refetchJournals } = useJournal();
 
   useEffect(() => {
-    if (selectedJournal) {
+    if (selectedJournalForView) {
       fetchJournalStats();
     }
-  }, [selectedJournal]);
+  }, [selectedJournalForView]);
 
   const fetchJournalStats = async () => {
-    if (!selectedJournal) return;
+    if (!selectedJournalForView) return;
     
     setLoading(true);
     try {
-      const stats = await getJournalStats(selectedJournal.id);
+      const stats = await getJournalStats(selectedJournalForView.id);
       setJournalStats(stats);
     } catch (error) {
       console.error('Error fetching journal stats:', error);
@@ -64,7 +65,7 @@ export function JournalsPage() {
   };
 
   const handleSelectJournal = (journal: Journal) => {
-    setSelectedJournal(journal);
+    setSelectedJournalForView(journal);
     setView('trades');
   };
 
@@ -79,8 +80,11 @@ export function JournalsPage() {
     setEditJournal(null);
     setEditTrade(null);
     
+    // Refresh journals in the context
+    refetchJournals();
+    
     // Refresh stats if in trade view
-    if (view === 'trades' && selectedJournal) {
+    if (view === 'trades' && selectedJournalForView) {
       fetchJournalStats();
     }
   };
@@ -92,12 +96,17 @@ export function JournalsPage() {
     setEditTrade(null);
   };
 
+  const handleBackToJournals = () => {
+    setSelectedJournalForView(null);
+    setView('journals');
+  };
+
   const formatCurrency = (value: number) => {
-    if (!selectedJournal) return '$0.00';
+    if (!selectedJournalForView) return '$0.00';
     
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: selectedJournal.base_currency || 'USD',
+      currency: selectedJournalForView.base_currency || 'USD',
     }).format(value);
   };
 
@@ -133,85 +142,53 @@ export function JournalsPage() {
         </>
       ) : (
         <>
-          <Group position="apart" mb="xl">
-            <Group>
-              <ActionIcon size="lg" onClick={() => setView('journals')} variant="light">
-                <IconBook size={18} />
-              </ActionIcon>
-              <Title order={1}>
-                {selectedJournal?.name}
-                {' '}
-                <Badge color={selectedJournal?.is_active ? 'green' : 'gray'} size="lg">
-                  {selectedJournal?.is_active ? 'Active' : 'Inactive'}
-                </Badge>
-              </Title>
-            </Group>
-            <Button 
-              leftIcon={<IconPlus size={16} />}
-              onClick={() => setShowTradeForm(true)}
-              disabled={showTradeForm}
-            >
-              Add Trade
-            </Button>
-          </Group>
+         <Group position="apart" mb="xl">
+  <Group>
+    <Button variant="outline" onClick={handleBackToJournals}>
+      Back to Journals
+    </Button>
+    <Title order={1}>
+      {selectedJournalForView?.name}
+      {' '}
+      <Badge color={selectedJournalForView?.is_active ? 'green' : 'gray'} size="lg">
+        {selectedJournalForView?.is_active ? 'Active' : 'Inactive'}
+      </Badge>
+    </Title>
+  </Group>
+  <Button 
+    leftIcon={<IconPlus size={16} />}
+    onClick={() => setShowTradeForm(true)}
+    disabled={showTradeForm}
+  >
+    Add Trade
+  </Button>
+</Group>
 
-          {selectedJournal && (
-            <>
-              {loading ? (
-                <Center my="xl">
-                  <Loader size="lg" />
-                </Center>
-              ) : (
-                <Grid mb="xl">
-                  <Grid.Col span={{ base: 12, md: 3 }}>
-                    <Card shadow="sm" padding="lg" radius="md" withBorder>
-                      <Text ta="center" fz="lg" fw={500}>Win Rate</Text>
-                      <Text ta="center" fz="xl" fw={700} c={journalStats?.win_rate >= 50 ? 'green' : 'red'}>
-                        {journalStats?.win_rate?.toFixed(1) || 0}%
-                      </Text>
-                    </Card>
-                  </Grid.Col>
-                  
-                  <Grid.Col span={{ base: 12, md: 3 }}>
-                    <Card shadow="sm" padding="lg" radius="md" withBorder>
-                      <Text ta="center" fz="lg" fw={500}>Total Trades</Text>
-                      <Text ta="center" fz="xl" fw={700}>
-                        {journalStats?.total_trades || 0}
-                      </Text>
-                    </Card>
-                  </Grid.Col>
-                  
-                  <Grid.Col span={{ base: 12, md: 3 }}>
-                    <Card shadow="sm" padding="lg" radius="md" withBorder>
-                      <Text ta="center" fz="lg" fw={500}>Open Positions</Text>
-                      <Text ta="center" fz="xl" fw={700}>
-                        {journalStats?.open_trades || 0}
-                      </Text>
-                    </Card>
-                  </Grid.Col>
-                  
-                  <Grid.Col span={{ base: 12, md: 3 }}>
-                    <Card shadow="sm" padding="lg" radius="md" withBorder>
-                      <Text ta="center" fz="lg" fw={500}>Total P/L</Text>
-                      <Text ta="center" fz="xl" fw={700} 
-                        c={journalStats?.total_profit_loss >= 0 ? 'green' : 'red'}>
-                        {formatCurrency(journalStats?.total_profit_loss || 0)}
-                      </Text>
-                    </Card>
-                  </Grid.Col>
-                </Grid>
-              )}
+          {selectedJournalForView && (
+  <>
+    {loading ? (
+      <Center my="xl">
+        <Loader size="lg" />
+      </Center>
+    ) : (
+      <TradeStatsDisplay stats={journalStats} formatCurrency={formatCurrency} />
+    )}
+
 
               {showTradeForm ? (
                 <TradeForm
                   editTrade={editTrade || undefined}
                   onSuccess={handleFormSuccess}
                   onCancel={handleFormCancel}
-                  journalId={selectedJournal.id}
+                  journalId={selectedJournalForView.id}
                 />
               ) : (
                 <Paper p="md" shadow="xs" radius="md">
-                  <TradeList onEditTrade={handleEditTrade} />
+                  <TradeList 
+                    onEditTrade={handleEditTrade}
+                    journalId={selectedJournalForView.id}
+                    onTradeUpdated={fetchJournalStats}
+                  />
                 </Paper>
               )}
             </>

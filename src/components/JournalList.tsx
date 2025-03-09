@@ -1,6 +1,6 @@
 // src/components/JournalList.tsx
 import { useState, useEffect } from 'react';
-import { Table, Group, Badge, Button, Text, ActionIcon, Tooltip, Card } from '@mantine/core';
+import { Table, Group, Badge, Button, Text, ActionIcon, Tooltip, Card, Box } from '@mantine/core';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { Journal } from '../lib/types';
 import { FaEdit, FaTrash } from 'react-icons/fa';
@@ -21,9 +21,16 @@ export function JournalList({ onEditJournal, onSelectJournal }: JournalListProps
 
   const fetchJournals = async () => {
     setLoading(true);
-    const journalsData = await getJournals();
-    setJournals(journalsData);
-    setLoading(false);
+    try {
+      const journalsData = await getJournals();
+      // Ensure journals is always an array
+      setJournals(Array.isArray(journalsData) ? journalsData : []);
+    } catch (error) {
+      console.error('Error fetching journals:', error);
+      setJournals([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteJournal = async (id: number) => {
@@ -38,7 +45,11 @@ export function JournalList({ onEditJournal, onSelectJournal }: JournalListProps
   }
 
   if (journals.length === 0) {
-    return <Text>No journals found. Create your first journal!</Text>;
+    return (
+      <Box py="xl" ta="center">
+        <Text>No journals found. Create your first journal!</Text>
+      </Box>
+    );
   }
 
   return (

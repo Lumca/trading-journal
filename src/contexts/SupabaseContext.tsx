@@ -2,49 +2,28 @@
 import { createContext, useContext, ReactNode } from 'react';
 import { supabase, Trade, NewTrade } from '../lib/supabase';
 import { useAuth } from './AuthContext';
-import { Journal, NewJournal, TradeIndicator, UserSettings } from '../lib/types';
+import { Journal, NewJournal, UserSettings, TradeIndicator } from '../lib/types';
 
 type SupabaseContextType = {
-  // Trade related methods
-  getTrades: () => Promise<Trade[]>;
-  getTradesByJournal: (journalId: number) => Promise<Trade[]>;
+  getTrades: (journalId?: number | null) => Promise<Trade[]>;
   addTrade: (trade: NewTrade) => Promise<Trade | null>;
   updateTrade: (id: number, trade: Partial<Trade>) => Promise<Trade | null>;
   deleteTrade: (id: number) => Promise<void>;
-  getTradeStats: () => Promise<TradeStats | null>;
-  
-  // Journal related methods
+  getTradeStats: (journalId?: number | null) => Promise<TradeStats | null>;
   getJournals: () => Promise<Journal[]>;
   getJournal: (id: number) => Promise<Journal | null>;
   addJournal: (journal: NewJournal) => Promise<Journal | null>;
   updateJournal: (id: number, journal: Partial<Journal>) => Promise<Journal | null>;
   deleteJournal: (id: number) => Promise<void>;
-  getJournalStats: (journalId: number) => Promise<JournalStats | null>;
-  
-  // User settings related methods
+  getJournalStats: (journalId: number) => Promise<TradeStats | null>;
   getUserSettings: () => Promise<UserSettings | null>;
   updateUserSettings: (settings: Partial<UserSettings>) => Promise<UserSettings | null>;
-  
-  // Trade indicators related methods
   getTradeIndicators: (tradeId: number) => Promise<TradeIndicator[]>;
-  addTradeIndicator: (data: { trade_id: number, indicator_name: string, notes?: string }) => Promise<TradeIndicator | null>;
-  updateTradeIndicator: (id: number, data: Partial<TradeIndicator>) => Promise<TradeIndicator | null>;
+  addTradeIndicator: (indicator: { trade_id: number; indicator_name: string }) => Promise<TradeIndicator | null>;
   deleteTradeIndicator: (id: number) => Promise<void>;
 };
 
 export interface TradeStats {
-  total_trades: number;
-  winning_trades: number;
-  losing_trades: number;
-  win_rate: number;
-  total_profit_loss: number;
-  average_profit_loss: number;
-  largest_win: number;
-  largest_loss: number;
-  open_trades: number;
-}
-
-export interface JournalStats {
   total_trades: number;
   winning_trades: number;
   losing_trades: number;
@@ -61,14 +40,21 @@ const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined
 export function SupabaseProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
-  // Function to get all trades
-  const getTrades = async (): Promise<Trade[]> => {
+  // Function to get all trades, optionally filtered by journal
+  const getTrades = async (journalId?: number | null): Promise<Trade[]> => {
     if (!user) return [];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('trades')
       .select('*')
       .order('entry_date', { ascending: false });
+    
+    // Apply journal filter if specified
+    if (journalId) {
+      query = query.eq('journal_id', journalId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching trades:', error);
@@ -78,38 +64,80 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     return data as Trade[];
   };
 
-  // Function to get trades by journal
-  const getTradesByJournal = async (journalId: number): Promise<Trade[]> => {
-    if (!user) return [];
+  // Function to get trade statistics, optionally filtered by journal
+    const getTradeStats = async (journalId?: number | null): Promise<TradeStats | null> => {
+  if (!user) return null;
 
-    const { data, error } = await supabase
+  try {
+    let { data, error } = await supabase
       .from('trades')
       .select('*')
-      .eq('journal_id', journalId)
+      .eq('user_id', user.id)
       .order('entry_date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching trades by journal:', error);
-      return [];
+    if (journalId) {
+      data = data?.filter(trade => trade.journal_id === journalId) || [];
     }
 
-    return data as Trade[];
-  };
-
-  // Function to get trade statistics
-  const getTradeStats = async (): Promise<TradeStats | null> => {
-    if (!user) return null;
-
-    const { data, error } = await supabase
-      .rpc('get_trade_stats', { user_id_param: user.id })
-      .single();
-
     if (error) {
-      console.error('Error fetching trade stats:', error);
+      console.error('Error fetching trades for stats:', error);
       return null;
     }
 
-    return data as TradeStats;
+    if (!data || !Array.isArray(data)) {
+      return null;
+    }
+
+    // Calculate statistics from raw trade data
+    const closedTrades = data.filter(trade => trade.status === 'closed');
+    const openTrades = data.filter(trade => trade.status === 'open');
+    
+    const winningTrades = closedTrades.filter(trade => 
+      trade.profit_loss !== null && trade.profit_loss > 0
+    );
+    
+    const losingTrades = closedTrades.filter(trade => 
+      trade.profit_loss !== null && trade.profit_loss < 0
+    );
+    
+    const breakEvenTrades = closedTrades.filter(trade => 
+      trade.profit_loss !== null && trade.profit_loss === 0
+    );
+
+    const totalProfitLoss = closedTrades.reduce((sum, trade) => 
+      sum + (trade.profit_loss || 0), 0
+    );
+    
+    const stats: TradeStats = {
+      total_trades: closedTrades.length + openTrades.length,
+      winning_trades: winningTrades.length,
+      losing_trades: losingTrades.length,
+      win_rate: closedTrades.length > 0 
+        ? (winningTrades.length / closedTrades.length) * 100 
+        : 0,
+      total_profit_loss: totalProfitLoss,
+      average_profit_loss: closedTrades.length > 0 
+        ? totalProfitLoss / closedTrades.length 
+        : 0,
+      largest_win: winningTrades.length > 0 
+        ? Math.max(...winningTrades.map(trade => trade.profit_loss || 0)) 
+        : 0,
+      largest_loss: losingTrades.length > 0 
+        ? Math.min(...losingTrades.map(trade => trade.profit_loss || 0)) 
+        : 0,
+      open_trades: openTrades.length
+    };
+
+    return stats;
+  } catch (error) {
+    console.error('Error calculating trade stats:', error);
+    return null;
+  }
+};
+
+  // Function to get journal-specific trade statistics
+  const getJournalStats = async (journalId: number): Promise<TradeStats | null> => {
+    return getTradeStats(journalId);
   };
 
   // Function to add a new trade
@@ -156,7 +184,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     if (!user) return null;
     
     // If we're updating prices, recalculate profit/loss
-    let updates: Partial<Trade> = { ...trade };
+    const updates: Partial<Trade> = { ...trade };
     
     if (
       (trade.exit_price || trade.entry_price || trade.quantity || trade.direction) &&
@@ -218,20 +246,34 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   // Function to get all journals
   const getJournals = async (): Promise<Journal[]> => {
-    if (!user) return [];
+  if (!user) {
+    console.warn('Attempted to get journals without a user');
+    return [];
+  }
 
+  try {
     const { data, error } = await supabase
       .from('journals')
       .select('*')
-      .order('created_at', { ascending: false });
+      .eq('user_id', user.id) // Add explicit user_id filter
+      .order('name', { ascending: true });
 
     if (error) {
       console.error('Error fetching journals:', error);
       return [];
     }
 
+    if (!data) {
+      console.warn('No journal data returned');
+      return [];
+    }
+
     return data as Journal[];
-  };
+  } catch (error) {
+    console.error('Exception while fetching journals:', error);
+    return [];
+  }
+};
 
   // Function to get a specific journal
   const getJournal = async (id: number): Promise<Journal | null> => {
@@ -257,12 +299,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
     const { data, error } = await supabase
       .from('journals')
-      .insert([
-        { 
-          ...journal, 
-          user_id: user.id
-        }
-      ])
+      .insert([{ ...journal, user_id: user.id }])
       .select()
       .single();
 
@@ -296,7 +333,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   // Function to delete a journal
   const deleteJournal = async (id: number): Promise<void> => {
     if (!user) return;
-
+    
     const { error } = await supabase
       .from('journals')
       .delete()
@@ -305,25 +342,6 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     if (error) {
       console.error('Error deleting journal:', error);
     }
-  };
-
-  // Function to get journal statistics
-  const getJournalStats = async (journalId: number): Promise<JournalStats | null> => {
-    if (!user) return null;
-
-    const { data, error } = await supabase
-      .rpc('get_journal_stats', { 
-        journal_id_param: journalId,
-        user_id_param: user.id 
-      })
-      .single();
-
-    if (error) {
-      console.error('Error fetching journal stats:', error);
-      return null;
-    }
-
-    return data as JournalStats;
   };
 
   // Function to get user settings
@@ -339,24 +357,36 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     if (error) {
       if (error.code === 'PGRST116') {
         // No settings found, create default settings
-        const defaultSettings: Partial<UserSettings> = {
+        const defaultSettings: Omit<UserSettings, 'id'> = {
+          user_id: user.id,
           enable_registration: true,
           custom_symbols: [],
           custom_asset_classes: [],
           default_asset_classes: {
-            forex: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CAD', 'AUD/USD'],
-            crypto: ['BTC/USD', 'ETH/USD', 'XRP/USD', 'LTC/USD'],
-            stocks: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
+            forex: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD'],
+            crypto: ['BTC/USD', 'ETH/USD', 'XRP/USD', 'LTC/USD', 'BCH/USD'],
+            stocks: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META']
           },
           custom_indicators: [],
           default_indicators: ['RSI', 'MACD', 'Moving Average', 'Bollinger Bands']
         };
-        
-        return await updateUserSettings(defaultSettings);
+
+        const { data: newSettings, error: createError } = await supabase
+          .from('user_settings')
+          .insert([defaultSettings])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating default user settings:', createError);
+          return null;
+        }
+
+        return newSettings as UserSettings;
+      } else {
+        console.error('Error fetching user settings:', error);
+        return null;
       }
-      
-      console.error('Error fetching user settings:', error);
-      return null;
     }
 
     return data as UserSettings;
@@ -366,38 +396,19 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const updateUserSettings = async (settings: Partial<UserSettings>): Promise<UserSettings | null> => {
     if (!user) return null;
 
-    // Check if settings exist
-    const { data: existingSettings } = await supabase
+    const { data, error } = await supabase
       .from('user_settings')
-      .select('id')
+      .update(settings)
       .eq('user_id', user.id)
+      .select()
       .single();
 
-    let result;
-    
-    if (existingSettings) {
-      // Update existing settings
-      result = await supabase
-        .from('user_settings')
-        .update(settings)
-        .eq('id', existingSettings.id)
-        .select()
-        .single();
-    } else {
-      // Insert new settings
-      result = await supabase
-        .from('user_settings')
-        .insert([{ ...settings, user_id: user.id }])
-        .select()
-        .single();
-    }
-
-    if (result.error) {
-      console.error('Error updating user settings:', result.error);
+    if (error) {
+      console.error('Error updating user settings:', error);
       return null;
     }
 
-    return result.data as UserSettings;
+    return data as UserSettings;
   };
 
   // Function to get trade indicators
@@ -418,12 +429,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   };
 
   // Function to add a trade indicator
-  const addTradeIndicator = async (data: { trade_id: number, indicator_name: string, notes?: string }): Promise<TradeIndicator | null> => {
+  const addTradeIndicator = async (indicator: { trade_id: number; indicator_name: string }): Promise<TradeIndicator | null> => {
     if (!user) return null;
 
-    const { data: result, error } = await supabase
+    const { data, error } = await supabase
       .from('trade_indicators')
-      .insert([data])
+      .insert([indicator])
       .select()
       .single();
 
@@ -432,32 +443,13 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return null;
     }
 
-    return result as TradeIndicator;
-  };
-
-  // Function to update a trade indicator
-  const updateTradeIndicator = async (id: number, data: Partial<TradeIndicator>): Promise<TradeIndicator | null> => {
-    if (!user) return null;
-
-    const { data: result, error } = await supabase
-      .from('trade_indicators')
-      .update(data)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating trade indicator:', error);
-      return null;
-    }
-
-    return result as TradeIndicator;
+    return data as TradeIndicator;
   };
 
   // Function to delete a trade indicator
   const deleteTradeIndicator = async (id: number): Promise<void> => {
     if (!user) return;
-
+    
     const { error } = await supabase
       .from('trade_indicators')
       .delete()
@@ -469,31 +461,22 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   };
 
   const value = {
-    // Trade methods
     getTrades,
-    getTradesByJournal,
     addTrade,
     updateTrade,
     deleteTrade,
     getTradeStats,
-    
-    // Journal methods
     getJournals,
     getJournal,
     addJournal,
     updateJournal,
     deleteJournal,
     getJournalStats,
-    
-    // User settings methods
     getUserSettings,
     updateUserSettings,
-    
-    // Trade indicators methods
     getTradeIndicators,
     addTradeIndicator,
-    updateTradeIndicator,
-    deleteTradeIndicator,
+    deleteTradeIndicator
   };
 
   return (

@@ -1,27 +1,30 @@
 // src/components/TradeList.tsx
 import { useState, useEffect } from 'react';
-import { Table, Group, Badge, Button, Text, ActionIcon, Tooltip } from '@mantine/core';
+import { Table, Group, Badge, Button, Text, ActionIcon, Tooltip, Box } from '@mantine/core';
 import { useSupabase } from '../contexts/SupabaseContext';
+import { useJournal } from '../contexts/JournalContext';
 import { Trade } from '../lib/supabase';
-import { IoMdOpen } from 'react-icons/io';
 import { FaEdit, FaTrash } from 'react-icons/fa';
 
 interface TradeListProps {
   onEditTrade: (trade: Trade) => void;
+  journalId?: number | null;
+  onTradeUpdated?: () => void;
 }
 
-export function TradeList({ onEditTrade }: TradeListProps) {
+export function TradeList({ onEditTrade, journalId, onTradeUpdated }: TradeListProps) {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const { getTrades, deleteTrade } = useSupabase();
+  const { selectedJournal } = useJournal();
 
   useEffect(() => {
     fetchTrades();
-  }, []);
+  }, [journalId]);
 
   const fetchTrades = async () => {
     setLoading(true);
-    const tradesData = await getTrades();
+    const tradesData = await getTrades(journalId);
     setTrades(tradesData);
     setLoading(false);
   };
@@ -30,13 +33,17 @@ export function TradeList({ onEditTrade }: TradeListProps) {
     if (window.confirm('Are you sure you want to delete this trade?')) {
       await deleteTrade(id);
       fetchTrades();
+      if (onTradeUpdated) {
+        onTradeUpdated();
+      }
     }
   };
 
   const formatCurrency = (value: number) => {
+    const currencyCode = selectedJournal?.base_currency || 'USD';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currencyCode,
     }).format(value);
   };
 
@@ -45,7 +52,12 @@ export function TradeList({ onEditTrade }: TradeListProps) {
   }
 
   if (trades.length === 0) {
-    return <Text>No trades found. Add your first trade!</Text>;
+    return (
+      <Box py="xl" ta="center">
+        <Text size="lg" fw={500} c="dimmed">No trades found.</Text>
+        <Text>Add your first trade to get started!</Text>
+      </Box>
+    );
   }
 
   return (
@@ -92,7 +104,7 @@ export function TradeList({ onEditTrade }: TradeListProps) {
             <Table.Td>
               {trade.profit_loss_percent !== undefined ? (
                 <Text c={trade.profit_loss_percent >= 0 ? 'green' : 'red'} fw={700}>
-                  {trade.profit_loss_percent.toFixed(2)}%
+                  {trade.profit_loss_percent?.toFixed(2)}%
                 </Text>
               ) : (
                 '-'

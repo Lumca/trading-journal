@@ -18,22 +18,39 @@ import {
   MultiSelect,
   Select,
   Loader,
-  Center
+  Center,
+  PasswordInput
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useSupabase } from '../contexts/SupabaseContext';
+import { useAuth } from '../contexts/AuthContext';
 import { UserSettings, AssetClass } from '../lib/types';
-import { IconPlus, IconTrash, IconInfoCircle } from '@tabler/icons-react';
+import { IconPlus, IconTrash, IconInfoCircle, IconCheck, IconX } from '@tabler/icons-react';
 
 export function SettingsPage() {
   const { getUserSettings, updateUserSettings } = useSupabase();
+  const { resetPassword } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [newSymbol, setNewSymbol] = useState('');
   const [newIndicator, setNewIndicator] = useState('');
   const [activeTab, setActiveTab] = useState<string | null>('general');
   const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass>('forex');
+
+  const passwordForm = useForm({
+    initialValues: {
+      newPassword: '',
+      confirmPassword: '',
+    },
+    validate: {
+      newPassword: (value) => (value.length < 6 ? 'Password must be at least 6 characters' : null),
+      confirmPassword: (value, values) => (value !== values.newPassword ? 'Passwords do not match' : null),
+    },
+  });
 
   useEffect(() => {
     fetchSettings();
@@ -103,6 +120,26 @@ export function SettingsPage() {
     }
   };
 
+  const handleChangePassword = async (values: typeof passwordForm.values) => {
+    setChangingPassword(true);
+    setPasswordSuccess(false);
+    setPasswordError(null);
+    
+    try {
+      const { error } = await resetPassword(values.newPassword);
+      if (error) {
+        setPasswordError(error.message);
+      } else {
+        setPasswordSuccess(true);
+        passwordForm.reset();
+      }
+    } catch (error) {
+      setPasswordError((error as Error).message);
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const addSymbol = () => {
     if (newSymbol.trim()) {
       const symbol = newSymbol.trim().toUpperCase();
@@ -149,15 +186,16 @@ export function SettingsPage() {
     <Container size="lg" py="xl">
       <Title order={1} mb="lg">Settings</Title>
 
-      <form onSubmit={form.onSubmit(handleSaveSettings)}>
-        <Tabs value={activeTab} onChange={setActiveTab}>
-          <Tabs.List mb="md">
-            <Tabs.Tab value="general">General</Tabs.Tab>
-            <Tabs.Tab value="symbols">Symbols & Assets</Tabs.Tab>
-            <Tabs.Tab value="indicators">Indicators</Tabs.Tab>
-          </Tabs.List>
+      <Tabs value={activeTab} onChange={setActiveTab}>
+        <Tabs.List mb="md">
+          <Tabs.Tab value="general">General</Tabs.Tab>
+          <Tabs.Tab value="symbols">Symbols & Assets</Tabs.Tab>
+          <Tabs.Tab value="indicators">Indicators</Tabs.Tab>
+          <Tabs.Tab value="security">Security</Tabs.Tab>
+        </Tabs.List>
 
-          <Tabs.Panel value="general">
+        <Tabs.Panel value="general">
+          <form onSubmit={form.onSubmit(handleSaveSettings)}>
             <Card shadow="sm" p="lg" radius="md" withBorder mb="lg">
               <Title order={3} mb="md">General Settings</Title>
               
@@ -175,10 +213,18 @@ export function SettingsPage() {
                   Note: Disabling registration will prevent new users from creating accounts, but won't affect existing users.
                 </Alert>
               </Stack>
+              
+              <Group position="right" mt="xl">
+                <Button type="submit" loading={saving}>
+                  Save Settings
+                </Button>
+              </Group>
             </Card>
-          </Tabs.Panel>
+          </form>
+        </Tabs.Panel>
 
-          <Tabs.Panel value="symbols">
+        <Tabs.Panel value="symbols">
+          <form onSubmit={form.onSubmit(handleSaveSettings)}>
             <Card shadow="sm" p="lg" radius="md" withBorder mb="lg">
               <Title order={3} mb="md">Symbols & Asset Classes</Title>
               
@@ -302,10 +348,18 @@ export function SettingsPage() {
                   </Stack>
                 </Tabs.Panel>
               </Tabs>
+              
+              <Group position="right" mt="xl">
+                <Button type="submit" loading={saving}>
+                  Save Settings
+                </Button>
+              </Group>
             </Card>
-          </Tabs.Panel>
+          </form>
+        </Tabs.Panel>
 
-          <Tabs.Panel value="indicators">
+        <Tabs.Panel value="indicators">
+          <form onSubmit={form.onSubmit(handleSaveSettings)}>
             <Card shadow="sm" p="lg" radius="md" withBorder mb="lg">
               <Title order={3} mb="md">Technical Indicators</Title>
               
@@ -367,16 +421,58 @@ export function SettingsPage() {
                   )}
                 </Box>
               </Stack>
+              
+              <Group position="right" mt="xl">
+                <Button type="submit" loading={saving}>
+                  Save Settings
+                </Button>
+              </Group>
             </Card>
-          </Tabs.Panel>
-        </Tabs>
+          </form>
+        </Tabs.Panel>
 
-        <Group position="right" mt="xl">
-          <Button type="submit" loading={saving}>
-            Save Settings
-          </Button>
-        </Group>
-      </form>
+        <Tabs.Panel value="security">
+          <Card shadow="sm" p="lg" radius="md" withBorder mb="lg">
+            <Title order={3} mb="md">Security Settings</Title>
+            
+            <form onSubmit={passwordForm.onSubmit(handleChangePassword)}>
+              <Stack spacing="md">
+                {passwordSuccess && (
+                  <Alert icon={<IconCheck size={16} />} color="green" title="Success">
+                    Your password has been changed successfully.
+                  </Alert>
+                )}
+                
+                {passwordError && (
+                  <Alert icon={<IconX size={16} />} color="red" title="Error">
+                    {passwordError}
+                  </Alert>
+                )}
+                
+                <PasswordInput
+                  required
+                  label="New Password"
+                  placeholder="Enter new password"
+                  {...passwordForm.getInputProps('newPassword')}
+                />
+                
+                <PasswordInput
+                  required
+                  label="Confirm New Password"
+                  placeholder="Confirm new password"
+                  {...passwordForm.getInputProps('confirmPassword')}
+                />
+                
+                <Group position="right" mt="md">
+                  <Button type="submit" loading={changingPassword}>
+                    Change Password
+                  </Button>
+                </Group>
+              </Stack>
+            </form>
+          </Card>
+        </Tabs.Panel>
+      </Tabs>
     </Container>
   );
 }

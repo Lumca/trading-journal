@@ -1,5 +1,4 @@
 // src/App.tsx
-// Updated to include the CalendarPage component
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import { 
@@ -12,18 +11,22 @@ import {
   Burger,
   Text,
   Box,
-  useMantineTheme
+  useMantineTheme,
+  Divider
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { DashboardPage } from './pages/DashboardPage';
 import { JournalsPage } from './pages/JournalsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { LoginPage } from './pages/LoginPage';
-import { CalendarPage } from './pages/CalendarPage'; // Import the new CalendarPage
 import { SupabaseProvider } from './contexts/SupabaseContext';
+import { JournalProvider } from './contexts/JournalContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Navigation } from './components/Navigation';
-import { useState } from 'react';
-import { IconChartBar } from '@tabler/icons-react';
+import { JournalSelector } from './components/JournalSelector';
+import { useState, useEffect } from 'react';
+import { IconChartBar, IconCalendar } from '@tabler/icons-react';
 
 // Define a custom theme
 const theme = createTheme({
@@ -43,11 +46,46 @@ function PlaceholderView({ title }: { title: string }) {
   );
 }
 
+// Calendar view placeholder
+function CalendarView() {
+  return (
+    <Box p="xl" style={{ textAlign: 'center' }}>
+      <IconCalendar size={48} stroke={1.5} />
+      <Title order={2} mt="md">Trade Calendar</Title>
+      <Text mt="md">A calendar view of your trades is coming soon!</Text>
+    </Box>
+  );
+}
+
 function AppContent() {
   const { user, loading, signOut } = useAuth();
-  const [opened, setOpened] = useState(false);
-  const [activeView, setActiveView] = useState('dashboard');
+  const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
+  const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
   const theme = useMantineTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Determine active view from current path
+  const getActiveViewFromPath = (path: string) => {
+    if (path.startsWith('/dashboard')) return 'dashboard';
+    if (path.startsWith('/journals')) return 'journals';
+    if (path.startsWith('/statistics')) return 'statistics';
+    if (path.startsWith('/calendar')) return 'calendar';
+    if (path.startsWith('/settings')) return 'settings';
+    return 'dashboard';
+  };
+  
+  const activeView = getActiveViewFromPath(location.pathname);
+  
+  // Handle navigation from sidebar
+  const handleNavigation = (view: string) => {
+    navigate(`/${view}`);
+    
+    // Close mobile navigation when navigating
+    if (mobileOpened) {
+      toggleMobile();
+    }
+  };
   
   if (loading) {
     return <div>Loading...</div>;
@@ -56,23 +94,6 @@ function AppContent() {
   if (!user) {
     return <LoginPage />;
   }
-
-  const renderView = () => {
-    switch (activeView) {
-      case 'dashboard':
-        return <DashboardPage />;
-      case 'journals':
-        return <JournalsPage />;
-      case 'statistics':
-        return <PlaceholderView title="Statistics" />;
-      case 'calendar':
-        return <CalendarPage />; // Use our new CalendarPage component
-      case 'settings':
-        return <SettingsPage />;
-      default:
-        return <DashboardPage />;
-    }
-  };
   
   return (
     <AppShell
@@ -80,44 +101,66 @@ function AppContent() {
       navbar={{
         width: 300,
         breakpoint: 'sm',
-        collapsed: { mobile: !opened }
+        collapsed: { mobile: !mobileOpened, desktop: !desktopOpened }
       }}
       header={{ height: 60 }}
     >
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group>
-            <Burger
-              opened={opened}
-              onClick={() => setOpened((o) => !o)}
-              size="sm"
-              color={theme.colors.gray[6]}
-              hiddenFrom="sm"
-            />
-            <Title order={3}>Trading Journal</Title>
-          </Group>
-          <Group>
-            <Text size="sm" fw={500}>
-              {user.email}
-            </Text>
-            <Button variant="subtle" onClick={signOut}>
-              Sign Out
-            </Button>
-          </Group>
-        </Group>
-      </AppShell.Header>
+  <Group h="100%" px="md" justify="space-between">
+    <Group>
+      <Burger
+        opened={mobileOpened}
+        onClick={toggleMobile}
+        size="sm"
+        color={theme.colors.gray[6]}
+        hiddenFrom="sm"
+      />
+      <Burger
+        opened={desktopOpened}
+        onClick={toggleDesktop}
+        size="sm"
+        color={theme.colors.gray[6]}
+        visibleFrom="sm"
+      />
+      <Title order={3}>Trading Journal</Title>
+    </Group>
+    
+    <Group>
+      {/* Only show journal selector when logged in and on certain pages */}
+      {user && ['dashboard', 'journals', 'statistics', 'calendar'].includes(activeView) && (
+        <Box style={{ width: '200px' }}>
+          <JournalSelector />
+        </Box>
+      )}
+      {user && <Divider orientation="vertical" />}
+      {user && (
+        <Text size="sm" fw={500}>
+          {user.email}
+        </Text>
+      )}
+    </Group>
+  </Group>
+</AppShell.Header>
 
       <AppShell.Navbar p="md">
         <Navigation
-          opened={opened}
-          onClose={() => setOpened(false)}
-          onNavigate={setActiveView}
+          opened={mobileOpened}
+          onClose={() => toggleMobile()}
+          onNavigate={handleNavigation}
           active={activeView}
+          isCollapsed={!desktopOpened}
         />
       </AppShell.Navbar>
 
       <AppShell.Main>
-        {renderView()}
+        <Routes>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/journals" element={<JournalsPage />} />
+          <Route path="/statistics" element={<PlaceholderView title="Statistics" />} />
+          <Route path="/calendar" element={<CalendarView />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
       </AppShell.Main>
     </AppShell>
   );
@@ -126,11 +169,15 @@ function AppContent() {
 function App() {
   return (
     <MantineProvider theme={theme}>
-      <AuthProvider>
-        <SupabaseProvider>
-          <AppContent />
-        </SupabaseProvider>
-      </AuthProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <SupabaseProvider>
+            <JournalProvider>
+              <AppContent />
+            </JournalProvider>
+          </SupabaseProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </MantineProvider>
   );
 }

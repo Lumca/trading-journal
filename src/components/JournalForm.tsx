@@ -15,6 +15,7 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useSupabase } from '../contexts/SupabaseContext';
+import { useJournal } from '../contexts/JournalContext';
 import { Journal, NewJournal } from '../lib/types';
 import { FaTimes } from 'react-icons/fa';
 
@@ -26,6 +27,7 @@ interface JournalFormProps {
 
 export function JournalForm({ editJournal, onSuccess, onCancel }: JournalFormProps) {
   const { addJournal, updateJournal } = useSupabase();
+  const { refetchJournals } = useJournal();
   const [loading, setLoading] = useState(false);
 
   const form = useForm({
@@ -59,6 +61,9 @@ export function JournalForm({ editJournal, onSuccess, onCancel }: JournalFormPro
         await addJournal(journalData);
       }
 
+      // Refresh journals in context
+      await refetchJournals();
+      
       form.reset();
       onSuccess();
     } catch (error) {

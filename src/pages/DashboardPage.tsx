@@ -14,13 +14,16 @@ import {
   useMantineTheme,
   Box,
   Loader,
-  Center
+  Center,
+  Badge
 } from '@mantine/core';
 import { TradeList } from '../components/TradeList';
 import { TradeForm } from '../components/TradeForm';
 import { useSupabase, TradeStats } from '../contexts/SupabaseContext';
+import { useJournal } from '../contexts/JournalContext';
 import { Trade } from '../lib/supabase';
 import { FaPlus } from 'react-icons/fa';
+import { TradeStatsDisplay } from '../components/TradeStats';
 
 export function DashboardPage() {
   const [showForm, setShowForm] = useState(false);
@@ -29,18 +32,19 @@ export function DashboardPage() {
   const [stats, setStats] = useState<TradeStats | null>(null);
   const [loading, setLoading] = useState(true);
   const { getTrades, getTradeStats } = useSupabase();
+  const { selectedJournalId, selectedJournal } = useJournal();
   const theme = useMantineTheme();
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedJournalId]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const [tradesData, statsData] = await Promise.all([
-        getTrades(),
-        getTradeStats()
+        getTrades(selectedJournalId),
+        getTradeStats(selectedJournalId)
       ]);
       
       setTrades(tradesData);
@@ -68,12 +72,13 @@ export function DashboardPage() {
     setEditTrade(undefined);
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
+const formatCurrency = (value: number) => {
+  const currencyCode = selectedJournal?.base_currency || 'USD';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
+  }).format(value);
+};
 
   if (loading) {
     return (
@@ -83,132 +88,54 @@ export function DashboardPage() {
     );
   }
 
+const journalTitle = selectedJournal ? (
+  <Group>
+    <Title order={1}>Trading Journal</Title>
+    <Badge 
+      color={selectedJournal.is_active ? 'green' : 'gray'} 
+      size="lg" 
+      variant="filled"
+    >
+      {selectedJournal.name}
+    </Badge>
+  </Group>
+) : (
+  <Title order={1}>Trading Journal</Title>
+);
+
   return (
     <Container size="xl" py="xl">
       <Stack spacing="xl">
-        <Title order={1}>Trading Journal</Title>
+        {journalTitle}
 
-        <Grid>
-          <Grid.Col span={{ base: 12, md: 3 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Text ta="center" fz="lg" fw={500} mt="md">
-                Win Rate
-              </Text>
-              <Box mx="auto" mt="md">
-                <RingProgress
-                  size={120}
-                  thickness={12}
-                  roundCaps
-                  sections={[
-                    { value: stats?.win_rate || 0, color: 'green' },
-                    { value: 100 - (stats?.win_rate || 0), color: 'red' },
-                  ]}
-                  label={
-                    <Text ta="center" fz="xl" fw={700}>
-                      {(stats?.win_rate || 0).toFixed(1)}%
-                    </Text>
-                  }
-                />
-              </Box>
-            </Card>
-          </Grid.Col>
-          
-          <Grid.Col span={{ base: 12, md: 3 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Text ta="center" fz="lg" fw={500}>
-                Total Trades
-              </Text>
-              <Text ta="center" fz="xl" fw={700} mt="md">
-                {stats?.total_trades || 0}
-              </Text>
-              <Group position="center" spacing="xs" mt="xs">
-                <Text ta="center" size="sm" c="green">
-                  {stats?.winning_trades || 0} wins
-                </Text>
-                <Text ta="center" size="sm">•</Text>
-                <Text ta="center" size="sm" c="red">
-                  {stats?.losing_trades || 0} losses
-                </Text>
-              </Group>
-            </Card>
-          </Grid.Col>
-          
-          <Grid.Col span={{ base: 12, md: 3 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Text ta="center" fz="lg" fw={500}>
-                Open Positions
-              </Text>
-              <Text ta="center" fz="xl" fw={700} mt="md">
-                {stats?.open_trades || 0}
-              </Text>
-            </Card>
-          </Grid.Col>
-          
-          <Grid.Col span={{ base: 12, md: 3 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Text ta="center" fz="lg" fw={500}>
-                Total P/L
-              </Text>
-              <Text 
-                ta="center" 
-                fz="xl" 
-                fw={700} 
-                mt="md"
-                c={stats && stats.total_profit_loss >= 0 ? 'green' : 'red'}
-              >
-                {formatCurrency(stats?.total_profit_loss || 0)}
-              </Text>
-              <Text ta="center" size="sm" mt="xs">
-                Avg: {formatCurrency(stats?.average_profit_loss || 0)}
-              </Text>
-            </Card>
-          </Grid.Col>
-        </Grid>
 
-        <Grid>
-          <Grid.Col span={{ base: 12, md: 6 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Group position="apart">
-                <Text fz="lg" fw={500}>Largest Win</Text>
-                <Text fz="lg" fw={700} c="green">
-                  {formatCurrency(stats?.largest_win || 0)}
-                </Text>
-              </Group>
-            </Card>
-          </Grid.Col>
-          
-          <Grid.Col span={{ base: 12, md: 6 }}>
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Group position="apart">
-                <Text fz="lg" fw={500}>Largest Loss</Text>
-                <Text fz="lg" fw={700} c="red">
-                  {formatCurrency(stats?.largest_loss || 0)}
-                </Text>
-              </Group>
-            </Card>
-          </Grid.Col>
-        </Grid>
+<TradeStatsDisplay stats={stats} formatCurrency={formatCurrency} />
 
-        <Group position="apart" mt="md">
-          <Title order={2}>Trades</Title>
-          <Button 
-            leftSection={<FaPlus size={14} />} 
-            onClick={() => setShowForm(true)}
-            disabled={showForm}
-          >
-            Add Trade
-          </Button>
-        </Group>
+<Group position="apart" mt="xl">
+  <Title order={2}>Trades</Title>
+  <Button 
+    leftIcon={<FaPlus size={14} />} 
+    onClick={() => setShowForm(true)}
+    disabled={showForm}
+  >
+    Add Trade
+  </Button>
+</Group>
 
         {showForm ? (
           <TradeForm 
             editTrade={editTrade} 
             onSuccess={handleFormSuccess} 
-            onCancel={handleFormCancel} 
+            onCancel={handleFormCancel}
+            journalId={selectedJournalId}
           />
         ) : (
           <Paper p="md" shadow="xs" radius="md">
-            <TradeList onEditTrade={handleEditTrade} />
+            <TradeList 
+              onEditTrade={handleEditTrade} 
+              journalId={selectedJournalId}
+              onTradeUpdated={fetchData}
+            />
           </Paper>
         )}
       </Stack>

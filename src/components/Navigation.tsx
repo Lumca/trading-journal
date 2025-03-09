@@ -1,16 +1,14 @@
 // src/components/Navigation.tsx
-import { useState } from 'react';
-import { NavLink, Group, Box, rem, UnstyledButton } from '@mantine/core';
+import { NavLink, Box, rem } from '@mantine/core';
 import { 
   IconDashboard, 
   IconChartBar, 
   IconSettings, 
   IconCalendar,
-  IconChevronRight,
-  IconChevronLeft,
   IconLogout,
   IconBook
 } from '@tabler/icons-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface NavigationProps {
@@ -18,11 +16,12 @@ interface NavigationProps {
   onClose: () => void;
   onNavigate: (view: string) => void;
   active: string;
+  isCollapsed: boolean;
 }
 
-export function Navigation({ opened, onClose, onNavigate, active }: NavigationProps) {
+export function Navigation({ opened, onClose, onNavigate, active, isCollapsed }: NavigationProps) {
   const { signOut } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   const links = [
     { icon: IconDashboard, label: 'Dashboard', value: 'dashboard' },
@@ -34,40 +33,38 @@ export function Navigation({ opened, onClose, onNavigate, active }: NavigationPr
 
   const handleNavClick = (value: string) => {
     onNavigate(value);
-    if (opened) {
-      onClose();
-    }
+  };
+  
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
   };
 
   return (
-    <Box>
-      <Box style={{ display: 'flex', justifyContent: 'flex-end' }} mb="xl">
-        <UnstyledButton 
-          onClick={() => setCollapsed(!collapsed)}
-          style={{ color: 'gray' }}
-        >
-          {collapsed ? <IconChevronRight size={18} /> : <IconChevronLeft size={18} />}
-        </UnstyledButton>
-      </Box>
-      
+    <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box style={{ flex: 1 }}>
         {links.map((link) => (
           <NavLink
             key={link.value}
-            label={collapsed ? '' : link.label}
+            label={isCollapsed ? '' : link.label}
             leftSection={<link.icon size={24} stroke={1.5} />}
             active={link.value === active}
             onClick={() => handleNavClick(link.value)}
             mb={rem(8)}
+            p={isCollapsed ? 'xs' : undefined}
+            childrenOffset={isCollapsed ? 0 : undefined}
+            justifyContent={isCollapsed ? 'center' : undefined}
           />
         ))}
       </Box>
 
       <Box mt="auto">
         <NavLink
-          label={collapsed ? '' : 'Logout'}
+          label={isCollapsed ? '' : 'Logout'}
           leftSection={<IconLogout size={24} stroke={1.5} />}
-          onClick={signOut}
+          onClick={handleSignOut}
+          p={isCollapsed ? 'xs' : undefined}
+          justifyContent={isCollapsed ? 'center' : undefined}
         />
       </Box>
     </Box>

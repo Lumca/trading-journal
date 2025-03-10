@@ -10,20 +10,21 @@ import {
   Text, 
   Badge,
   Loader,
-  Center
+  Center,
+  Box,
+  ActionIcon,
+  Tooltip
 } from '@mantine/core';
 import { TradeList } from '../components/TradeList';
-import { TradeForm } from '../components/TradeForm';
 import { TradeView } from '../components/TradeView';
 import { TradeStatsDisplay } from '../components/TradeStats';
 import { useSupabase, TradeStats } from '../contexts/SupabaseContext';
 import { useJournal } from '../contexts/JournalContext';
 import { Trade } from '../lib/supabase';
-import { FaPlus } from 'react-icons/fa';
+import { TradeDrawerButton } from '../components/TradeDrawerButton';
+import { IconRefresh } from '@tabler/icons-react';
 
 export function DashboardPage() {
-  const [showForm, setShowForm] = useState(false);
-  const [editTrade, setEditTrade] = useState<Trade | undefined>(undefined);
   const [viewTrade, setViewTrade] = useState<Trade | undefined>(undefined);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [stats, setStats] = useState<TradeStats | null>(null);
@@ -52,30 +53,12 @@ export function DashboardPage() {
     }
   };
 
-  const handleEditTrade = (trade: Trade) => {
-    setEditTrade(trade);
-    setViewTrade(undefined); // Close view if open
-    setShowForm(true);
-  };
-
   const handleViewTrade = (trade: Trade) => {
     setViewTrade(trade);
-    setShowForm(false);
   };
 
   const handleBackFromView = () => {
     setViewTrade(undefined);
-  };
-
-  const handleFormSuccess = () => {
-    setShowForm(false);
-    setEditTrade(undefined);
-    fetchData();
-  };
-
-  const handleFormCancel = () => {
-    setShowForm(false);
-    setEditTrade(undefined);
   };
 
   const formatCurrency = (value: number) => {
@@ -112,41 +95,40 @@ export function DashboardPage() {
   return (
     <Container size="xl" py="xl">
       <Stack spacing="xl">
-        {journalTitle}
+        <Group position="apart">
+          {journalTitle}
+          <Group>
+            <Tooltip label="Refresh Data">
+              <ActionIcon variant="light" onClick={fetchData}>
+                <IconRefresh size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <TradeDrawerButton 
+              mode="add" 
+              onSuccess={fetchData} 
+              journalId={selectedJournalId} 
+            />
+          </Group>
+        </Group>
 
         <TradeStatsDisplay stats={stats} formatCurrency={formatCurrency} />
 
         <Group position="apart" mt="md">
           <Title order={2}>Trades</Title>
-          <Button 
-            leftIcon={<FaPlus size={14} />} 
-            onClick={() => {
-              setViewTrade(undefined);
-              setShowForm(true);
-            }}
-            disabled={showForm || !!viewTrade}
-          >
-            Add Trade
-          </Button>
         </Group>
 
-        {showForm ? (
-          <TradeForm 
-            editTrade={editTrade} 
-            onSuccess={handleFormSuccess} 
-            onCancel={handleFormCancel}
-            journalId={selectedJournalId}
-          />
-        ) : viewTrade ? (
+        {viewTrade ? (
           <TradeView 
             trade={viewTrade}
             onBack={handleBackFromView}
-            onEdit={handleEditTrade}
+            onEdit={() => {
+              // The TradeDrawerButton will handle the edit functionality
+              // Just keeping the view open
+            }}
           />
         ) : (
           <Paper p="md" shadow="xs" radius="md">
             <TradeList 
-              onEditTrade={handleEditTrade}
               onViewTrade={handleViewTrade}
               journalId={selectedJournalId}
               onTradeUpdated={fetchData}

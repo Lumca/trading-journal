@@ -13,7 +13,9 @@ import {
   Badge,
   Box,
   Center,
-  Loader
+  Loader,
+  ActionIcon,
+  Tooltip
 } from '@mantine/core';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { useJournal } from '../contexts/JournalContext';
@@ -21,17 +23,15 @@ import { Journal } from '../lib/types';
 import { JournalList } from '../components/JournalList';
 import { JournalForm } from '../components/JournalForm';
 import { TradeList } from '../components/TradeList';
-import { TradeForm } from '../components/TradeForm';
 import { TradeView } from '../components/TradeView';
 import { Trade } from '../lib/supabase';
-import { IconPlus } from '@tabler/icons-react';
+import { IconPlus, IconRefresh } from '@tabler/icons-react';
+import { TradeDrawerButton } from '../components/TradeDrawerButton';
 
 export function JournalsPage() {
   const [showJournalForm, setShowJournalForm] = useState(false);
-  const [showTradeForm, setShowTradeForm] = useState(false);
   const [selectedJournalForView, setSelectedJournalForView] = useState<Journal | null>(null);
   const [editJournal, setEditJournal] = useState<Journal | null>(null);
-  const [editTrade, setEditTrade] = useState<Trade | null>(null);
   const [viewTrade, setViewTrade] = useState<Trade | null>(null);
   const [loading, setLoading] = useState(false);
   const [journalStats, setJournalStats] = useState<any>(null);
@@ -70,23 +70,13 @@ export function JournalsPage() {
     setView('trades');
   };
 
-  const handleEditTrade = (trade: Trade) => {
-    setEditTrade(trade);
-    setViewTrade(null);
-    setShowTradeForm(true);
-  };
-
   const handleViewTrade = (trade: Trade) => {
     setViewTrade(trade);
-    setShowTradeForm(false);
   };
 
   const handleFormSuccess = () => {
     setShowJournalForm(false);
-    setShowTradeForm(false);
     setEditJournal(null);
-    setEditTrade(null);
-    setViewTrade(null);
     
     // Refresh journals in the context
     refetchJournals();
@@ -99,10 +89,7 @@ export function JournalsPage() {
 
   const handleFormCancel = () => {
     setShowJournalForm(false);
-    setShowTradeForm(false);
     setEditJournal(null);
-    setEditTrade(null);
-    setViewTrade(null);
   };
 
   const handleBackFromView = () => {
@@ -113,7 +100,6 @@ export function JournalsPage() {
     setSelectedJournalForView(null);
     setView('journals');
     setViewTrade(null);
-    setShowTradeForm(false);
   };
 
   const formatCurrency = (value: number) => {
@@ -170,16 +156,18 @@ export function JournalsPage() {
                 </Badge>
               </Title>
             </Group>
-            <Button 
-              leftIcon={<IconPlus size={16} />}
-              onClick={() => {
-                setViewTrade(null);
-                setShowTradeForm(true);
-              }}
-              disabled={showTradeForm || !!viewTrade}
-            >
-              Add Trade
-            </Button>
+            <Group>
+              <Tooltip label="Refresh Data">
+                <ActionIcon variant="light" onClick={fetchJournalStats}>
+                  <IconRefresh size={18} />
+                </ActionIcon>
+              </Tooltip>
+              <TradeDrawerButton 
+                mode="add" 
+                onSuccess={fetchJournalStats} 
+                journalId={selectedJournalForView?.id}
+              />
+            </Group>
           </Group>
 
           {selectedJournalForView && (
@@ -246,23 +234,15 @@ export function JournalsPage() {
                 </Grid>
               )}
 
-              {showTradeForm ? (
-                <TradeForm
-                  editTrade={editTrade || undefined}
-                  onSuccess={handleFormSuccess}
-                  onCancel={handleFormCancel}
-                  journalId={selectedJournalForView.id}
-                />
-              ) : viewTrade ? (
+              {viewTrade ? (
                 <TradeView
                   trade={viewTrade}
                   onBack={handleBackFromView}
-                  onEdit={handleEditTrade}
+                  onEdit={() => {}}
                 />
               ) : (
                 <Paper p="md" shadow="xs" radius="md">
                   <TradeList 
-                    onEditTrade={handleEditTrade}
                     onViewTrade={handleViewTrade}
                     journalId={selectedJournalForView.id}
                     onTradeUpdated={fetchJournalStats}

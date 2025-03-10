@@ -15,14 +15,19 @@ import {
   ActionIcon,
   Tooltip,
   Image,
-  SimpleGrid
+  SimpleGrid,
+  Center,
+  Loader,
+  Modal
 } from '@mantine/core';
-import { IconEdit, IconArrowLeft } from '@tabler/icons-react';
+import { IconEdit, IconArrowLeft, IconMaximize } from '@tabler/icons-react';
 import { FaEye } from 'react-icons/fa';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { useJournal } from '../contexts/JournalContext';
 import { Trade } from '../lib/supabase';
 import { Screenshot } from './TradeScreenshots';
+import { TradeEntry, TradeExit } from '../lib/types';
+import { TradeDrawerButton } from './TradeDrawerButton';
 
 interface TradeViewProps {
   trade: Trade;
@@ -31,18 +36,22 @@ interface TradeViewProps {
 }
 
 export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
-  const { getTradeIndicators, getTradeScreenshots } = useSupabase();
+  const { getTradeIndicators, getTradeScreenshots, getTradeEntries, getTradeExits } = useSupabase();
   const { selectedJournal } = useJournal();
   const [indicators, setIndicators] = useState<string[]>([]);
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
-  const [showImagePreview, setShowImagePreview] = useState(false);
-  const [previewImage, setPreviewImage] = useState<Screenshot | null>(null);
+  const [entries, setEntries] = useState<TradeEntry[]>([]);
+  const [exits, setExits] = useState<TradeExit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<Screenshot | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
   
   useEffect(() => {
     fetchTradeDetails();
   }, [trade.id]);
   
   const fetchTradeDetails = async () => {
+    setLoading(true);
     try {
       // Fetch indicators
       const indicatorsData = await getTradeIndicators(trade.id);
@@ -57,8 +66,19 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
         fileName: s.file_name
       }));
       setScreenshots(formattedScreenshots);
+
+      // Fetch entries and exits
+      const [entriesData, exitsData] = await Promise.all([
+        getTradeEntries(trade.id),
+        getTradeExits(trade.id)
+      ]);
+      
+      setEntries(entriesData);
+      setExits(exitsData);
     } catch (error) {
       console.error('Error fetching trade details:', error);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -83,9 +103,43 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
   };
   
   const openImagePreview = (screenshot: Screenshot) => {
-    setPreviewImage(screenshot);
-    setShowImagePreview(true);
+    setSelectedImage(screenshot);
+    setImageModalOpen(true);
   };
+
+  if (loading) {
+    return (
+      <Paper p="md" shadow="xs" radius="md">
+        <Center h={300}>
+          <Loader size="lg" />
+        </Center>
+      </Paper>
+    );
+  }
+
+  // Calculate some statistics based on entries and exits
+  const calculateTotals = () => {
+    const totalEntryQuantity = entries.reduce((sum, entry) => sum + entry.quantity, 0);
+    const executedExits = exits.filter(exit => exit.execution_status === 'executed');
+    const totalExitQuantity = executedExits.reduce((sum, exit) => sum + (exit.quantity || 0), 0);
+    
+    const totalEntryValue = entries.reduce((sum, entry) => sum + (entry.price * entry.quantity), 0);
+    const totalExitValue = executedExits.reduce((sum, exit) => 
+      sum + ((exit.price || 0) * (exit.quantity || 0)), 0);
+    
+    const avgEntryPrice = totalEntryQuantity > 0 ? totalEntryValue / totalEntryQuantity : 0;
+    const avgExitPrice = totalExitQuantity > 0 ? totalExitValue / totalExitQuantity : 0;
+    
+    return {
+      totalEntryQuantity,
+      totalExitQuantity,
+      avgEntryPrice,
+      avgExitPrice,
+      remainingQuantity: totalEntryQuantity - totalExitQuantity
+    };
+  };
+
+  const totals = calculateTotals();
 
   return (
     <Paper p="md" shadow="xs" radius="md">
@@ -115,12 +169,11 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
             </Badge>
           </Group>
           
-          <Button 
-            leftIcon={<IconEdit size={16} />} 
-            onClick={() => onEdit(trade)}
-          >
-            Edit Trade
-          </Button>
+          <TradeDrawerButton 
+            mode="edit" 
+            trade={trade} 
+            onSuccess={() => onEdit(trade)}
+          />
         </Group>
         
         {/* Trade Summary */}
@@ -134,36 +187,36 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
               <Grid>
                 <Grid.Col span={6}>
                   <Stack spacing="xs">
-                    <Text fw={500}>Entry Date</Text>
+                    <Text fw={500}>Initial Entry Date</Text>
                     <Text>{formatDate(trade.entry_date)}</Text>
                   </Stack>
                 </Grid.Col>
                 
                 <Grid.Col span={6}>
                   <Stack spacing="xs">
-                    <Text fw={500}>Exit Date</Text>
+                    <Text fw={500}>Last Exit Date</Text>
                     <Text>{formatDate(trade.exit_date)}</Text>
                   </Stack>
                 </Grid.Col>
                 
                 <Grid.Col span={6}>
                   <Stack spacing="xs">
-                    <Text fw={500}>Entry Price</Text>
-                    <Text>{formatCurrency(trade.entry_price)}</Text>
+                    <Text fw={500}>Average Entry Price</Text>
+                    <Text>{formatCurrency(totals.avgEntryPrice)}</Text>
                   </Stack>
                 </Grid.Col>
                 
                 <Grid.Col span={6}>
                   <Stack spacing="xs">
-                    <Text fw={500}>Exit Price</Text>
-                    <Text>{formatCurrency(trade.exit_price)}</Text>
+                    <Text fw={500}>Average Exit Price</Text>
+                    <Text>{formatCurrency(totals.avgExitPrice)}</Text>
                   </Stack>
                 </Grid.Col>
                 
                 <Grid.Col span={6}>
                   <Stack spacing="xs">
-                    <Text fw={500}>Quantity</Text>
-                    <Text>{trade.quantity}</Text>
+                    <Text fw={500}>Total Quantity</Text>
+                    <Text>{totals.totalEntryQuantity}</Text>
                   </Stack>
                 </Grid.Col>
                 
@@ -196,6 +249,92 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
                   </>
                 )}
               </Grid>
+            </Box>
+          </Stack>
+        </Card>
+        
+        {/* Entry Points */}
+        <Card withBorder shadow="xs">
+          <Stack spacing={0}>
+            <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
+              <Title order={4}>Entry Points</Title>
+            </Box>
+            
+            <Box p="md">
+              {entries && entries.length > 0 ? (
+                <Stack spacing="sm">
+                  {entries.map((entry, index) => (
+                    <Card key={entry.id} p="xs" withBorder>
+                      <Group position="apart">
+                        <Text fw={500}>Entry #{index + 1}</Text>
+                        <Text>{formatDate(entry.date)}</Text>
+                      </Group>
+                      <Group grow mt="xs">
+                        <Text>Price: {formatCurrency(entry.price)}</Text>
+                        <Text>Quantity: {entry.quantity}</Text>
+                      </Group>
+                      {entry.notes && (
+                        <Text size="sm" mt="xs" c="dimmed">
+                          Notes: {entry.notes}
+                        </Text>
+                      )}
+                    </Card>
+                  ))}
+                </Stack>
+              ) : (
+                <Text c="dimmed">No detailed entry points available.</Text>
+              )}
+            </Box>
+          </Stack>
+        </Card>
+        
+        {/* Exit Points */}
+        <Card withBorder shadow="xs">
+          <Stack spacing={0}>
+            <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
+              <Title order={4}>Exit Points & Orders</Title>
+            </Box>
+            
+            <Box p="md">
+              {exits && exits.length > 0 ? (
+                <Stack spacing="sm">
+                  {exits.map((exit, index) => (
+                    <Card key={exit.id} p="xs" withBorder>
+                      <Group position="apart">
+                        <Group>
+                          <Text fw={500}>Exit #{index + 1}</Text>
+                          {exit.is_stop_loss && (
+                            <Badge color="red">Stop Loss</Badge>
+                          )}
+                          {exit.is_take_profit && (
+                            <Badge color="green">Take Profit</Badge>
+                          )}
+                          <Badge 
+                            color={
+                              exit.execution_status === 'executed' ? 'green' :
+                              exit.execution_status === 'pending' ? 'blue' : 'gray'
+                            }
+                          >
+                            {exit.execution_status.toUpperCase()}
+                          </Badge>
+                        </Group>
+                        <Text>{exit.date ? formatDate(exit.date) : 'No date'}</Text>
+                      </Group>
+                      <Group grow mt="xs">
+                        <Text>Price: {formatCurrency(exit.price || 0)}</Text>
+                        <Text>Quantity: {exit.quantity || 0}</Text>
+                      </Group>
+                      {exit.notes && (
+                        <Text size="sm" mt="xs" c="dimmed">
+                          Notes: {exit.notes}
+                        </Text>
+                      )}
+                    </Card>
+                  ))}
+                </Stack>
+              ) : (
+                <Text c="dimmed">No detailed exit points available.</Text>
+              )}
             </Box>
           </Stack>
         </Card>
@@ -257,69 +396,72 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
         
         {/* Screenshots */}
         {screenshots.length > 0 && (
-  <Card withBorder shadow="xs">
-    <Stack spacing={0}>
-      <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
-        <Title order={4}>Screenshots</Title>
-      </Box>
-      
-      <Box p="md">
-        <SimpleGrid cols={3} breakpoints={[
-          { maxWidth: 'md', cols: 2 },
-          { maxWidth: 'sm', cols: 1 }
-        ]}>
-          {screenshots.map((screenshot, index) => (
-            <Card key={index} p="xs" withBorder shadow="xs">
-              <Box sx={{ cursor: 'pointer' }} onClick={() => openImagePreview(screenshot)}>
-                <Image 
-                  src={screenshot.url} 
-                  alt={`Trade screenshot ${index + 1}`}
-                  fit="cover"
-                  height={140}
-                  sx={{ 
-                    objectFit: 'cover',
-                    objectPosition: 'center top'
-                  }}
-                />
-                <Text size="xs" fw={500} mt={6} lineClamp={1}>
-                  {screenshot.fileName}
-                </Text>
+          <Card withBorder shadow="xs">
+            <Stack spacing={0}>
+              <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
+                <Title order={4}>Screenshots</Title>
               </Box>
-            </Card>
-          ))}
-        </SimpleGrid>
-      </Box>
-    </Stack>
-  </Card>
-)}
+              
+              <Box p="md">
+                <SimpleGrid cols={3} breakpoints={[
+                  { maxWidth: 'md', cols: 2 },
+                  { maxWidth: 'sm', cols: 1 }
+                ]}>
+                  {screenshots.map((screenshot, index) => (
+                    <Card key={index} p="xs" withBorder shadow="xs">
+                      <Box style={{ position: 'relative' }}>
+                        <Image 
+                          src={screenshot.url} 
+                          alt={`Trade screenshot ${index + 1}`}
+                          fit="cover"
+                          height={140}
+                          sx={{ 
+                            objectFit: 'cover',
+                            objectPosition: 'center top'
+                          }}
+                        />
+                        <ActionIcon
+                          style={{
+                            position: 'absolute',
+                            top: 5,
+                            right: 5,
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                          }}
+                          variant="transparent"
+                          onClick={() => openImagePreview(screenshot)}
+                        >
+                          <IconMaximize color="white" size={16} />
+                        </ActionIcon>
+                      </Box>
+                      <Text size="xs" fw={500} mt={6} lineClamp={1}>
+                        {screenshot.fileName}
+                      </Text>
+                    </Card>
+                  ))}
+                </SimpleGrid>
+              </Box>
+            </Stack>
+          </Card>
+        )}
       </Stack>
       
-      {/* Image Preview */}
-      {previewImage && (
-        <Box
-          style={{ 
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.9)',
-            zIndex: 1000,
-            display: showImagePreview ? 'flex' : 'none',
-            justifyContent: 'center',
-            alignItems: 'center',
-            cursor: 'pointer'
-          }}
-          onClick={() => setShowImagePreview(false)}
-        >
+      {/* Image Preview Modal */}
+      <Modal
+        opened={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        title={selectedImage?.fileName || "Screenshot"}
+        size="xl"
+        centered
+      >
+        {selectedImage && (
           <Image 
-            src={previewImage.url} 
-            alt="Trade screenshot preview" 
+            src={selectedImage.url} 
+            alt="Trade screenshot" 
             fit="contain"
-            style={{ maxHeight: '90vh', maxWidth: '90vw' }}
+            style={{ maxHeight: 'calc(80vh - 60px)' }}
           />
-        </Box>
-      )}
+        )}
+      </Modal>
     </Paper>
   );
 }

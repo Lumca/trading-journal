@@ -43,3 +43,30 @@ export interface TradeWithIndicators extends Trade {
 }
 
 export type AssetClass = 'forex' | 'crypto' | 'stocks' | 'custom';
+
+// Trade entry point
+export interface TradeEntry {
+    id: number;
+    trade_id: number;
+    date: string;
+    price: number;
+    quantity: number;
+    notes?: string;
+}
+
+export type TradeEntryInput = Omit<TradeEntry, 'id' | 'trade_id'>;
+
+// Trade exit point
+export interface TradeExit {
+    id: number;
+    trade_id: number;
+    date?: string;
+    price?: number;
+    quantity?: number;
+    is_stop_loss: boolean;
+    is_take_profit: boolean;
+    execution_status: 'pending' | 'executed' | 'canceled';
+    notes?: string;
+}
+
+export type TradeExitInput = Omit<TradeExit, 'id' | 'trade_id'>;

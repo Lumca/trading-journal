@@ -1,8 +1,8 @@
 // src/contexts/SupabaseContext.tsx
-import { createContext, useContext, ReactNode } from 'react';
-import { supabase, Trade, NewTrade } from '../lib/supabase';
+import { createContext, ReactNode, useContext } from 'react';
+import { NewTrade, supabase, Trade } from '../lib/supabase';
+import { Journal, NewJournal, TradeEntry, TradeEntryInput, TradeExit, TradeExitInput, TradeIndicator, UserSettings } from '../lib/types';
 import { useAuth } from './AuthContext';
-import { Journal, NewJournal, UserSettings, TradeIndicator, TradeEntry, TradeEntryInput, TradeExit, TradeExitInput } from '../lib/types';
 
 type SupabaseContextType = {
   getTrades: (journalId?: number | null) => Promise<Trade[]>;

@@ -1,23 +1,23 @@
 // src/components/TradeList.tsx
-import { useState, useEffect } from 'react';
-import { 
-  Table, 
-  Group, 
-  Badge, 
-  Text, 
-  ActionIcon, 
-  Tooltip, 
+import {
+  ActionIcon,
+  Badge,
   Box,
   Center,
+  Group,
   Loader,
   Select,
-  TextInput
+  Table,
+  Text,
+  TextInput,
+  Tooltip
 } from '@mantine/core';
-import { useSupabase } from '../contexts/SupabaseContext';
-import { useJournal } from '../contexts/JournalContext';
-import { Trade } from '../lib/supabase';
-import { FaEye, FaTrash } from 'react-icons/fa';
 import { IconSearch } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
+import { FaEye, FaTrash } from 'react-icons/fa';
+import { useJournal } from '../contexts/JournalContext';
+import { useSupabase } from '../contexts/SupabaseContext';
+import { Trade } from '../lib/supabase';
 import { TradeDrawerButton } from './TradeDrawerButton';
 
 interface TradeListProps {
@@ -108,12 +108,12 @@ export function TradeList({ onViewTrade, journalId, onTradeUpdated }: TradeListP
   return (
     <Box>
       {/* Filters */}
-      <Group position="apart" mb="md">
+      <Group justify="apart" mb="md">
         <TextInput
           placeholder="Search trades..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.currentTarget.value)}
-          icon={<IconSearch size={16} />}
+          leftSection={<IconSearch size={16} />}
           style={{ maxWidth: 300 }}
         />
         <Select

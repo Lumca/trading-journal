@@ -1,36 +1,31 @@
 // src/components/TradeDrawerForm.tsx
-import { useState, useEffect } from 'react';
 import {
-  TextInput,
-  NumberInput,
-  Select,
-  Button,
-  Group,
-  Stack,
-  Textarea,
-  Box,
-  Title,
-  Switch,
-  ActionIcon,
-  Tooltip,
-  Text,
-  Divider,
-  MultiSelect,
-  Checkbox,
-  Tabs,
-  Card,
-  Badge,
-  Drawer,
-  Grid,
-  ScrollArea
+    ActionIcon,
+    Badge,
+    Box,
+    Button,
+    Card,
+    Checkbox,
+    Drawer,
+    Grid,
+    Group,
+    NumberInput,
+    ScrollArea,
+    Select,
+    Stack,
+    Switch,
+    Text,
+    Textarea,
+    TextInput,
+    Title
 } from '@mantine/core';
 import { DateInput, TimeInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
+import { useEffect, useState } from 'react';
+import { FaPlus, FaTimes } from 'react-icons/fa';
 import { useSupabase } from '../contexts/SupabaseContext';
-import { Journal, UserSettings, TradeIndicator } from '../lib/types';
-import { FaTimes, FaPlus, FaMinus } from 'react-icons/fa';
-import { IconAlertCircle } from '@tabler/icons-react';
-import { TradeScreenshots, Screenshot } from './TradeScreenshots';
+import { Journal, UserSettings } from '../lib/types';
+import { Screenshot, TradeScreenshots } from './TradeScreenshots';
 
 // Define types for the enhanced trade model
 interface EntryPoint {
@@ -548,7 +543,7 @@ export function TradeDrawerForm({
       padding="md"
     >
       <ScrollArea h="calc(100vh - 120px)" offsetScrollbars>
-        <Stack spacing="md">
+        <Stack gap="md">
           {/* Basic Trade Information */}
           <Card shadow="sm" p="md" withBorder>
             <Title order={4} mb="md">Trade Information</Title>
@@ -632,11 +627,11 @@ export function TradeDrawerForm({
 
           {/* Entry Points */}
           <Card shadow="sm" p="md" withBorder>
-            <Group position="apart" mb="md">
+            <Group justify="apart" mb="md">
               <Title order={4}>Entry Points</Title>
               <Button 
                 size="xs" 
-                leftIcon={<FaPlus size={12} />} 
+                leftSection={<FaPlus size={12} />} 
                 onClick={addEntryPoint}
               >
                 Add Entry
@@ -645,7 +640,7 @@ export function TradeDrawerForm({
 
             {entryPoints.map((entry, index) => (
               <Card key={entry.id} shadow="sm" p="sm" withBorder mb="md">
-                <Group position="apart" mb="xs">
+                <Group justify="apart" mb="xs">
                   <Text fw={500}>Entry #{index + 1}</Text>
                   {entryPoints.length > 1 && (
                     <ActionIcon 
@@ -714,11 +709,11 @@ export function TradeDrawerForm({
           
           {/* Exit Points */}
           <Card shadow="sm" p="md" withBorder>
-            <Group position="apart" mb="md">
+            <Group justify="apart" mb="md">
               <Title order={4}>Exit Points & Targets</Title>
               <Button 
                 size="xs" 
-                leftIcon={<FaPlus size={12} />} 
+                leftSection={<FaPlus size={12} />} 
                 onClick={addExitPoint}
               >
                 Add Exit
@@ -727,7 +722,7 @@ export function TradeDrawerForm({
 
             {exitPoints.map((exit, index) => (
               <Card key={exit.id} shadow="sm" p="sm" withBorder mb="md">
-                <Group position="apart" mb="xs">
+                <Group justify="apart" mb="xs">
                   <Group>
                     <Text fw={500}>Exit #{index + 1}</Text>
                     {exit.isStopLoss && <Badge color="red">Stop Loss</Badge>}
@@ -947,7 +942,7 @@ export function TradeDrawerForm({
       </ScrollArea>
       
       {/* Footer buttons */}
-      <Group position="right" mt="lg" px="md">
+      <Group justify="right" mt="lg" px="md">
         <Button variant="outline" onClick={onClose}>
           Cancel
         </Button>

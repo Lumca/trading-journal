@@ -1,5 +1,5 @@
 // src/components/TradeStats.tsx
-import { Grid, Card, Text, Group, RingProgress, Box, Badge } from '@mantine/core';
+import { Badge, Box, Card, Grid, Group, RingProgress, Text } from '@mantine/core';
 import { TradeStats } from '../contexts/SupabaseContext';
 
 interface TradeStatsProps {
@@ -36,7 +36,7 @@ export function TradeStatsDisplay({ stats, formatCurrency }: TradeStatsProps) {
               }
             />
           </Box>
-          <Group position="center" mt="md" style={{ justifyContent: 'center' }}>
+          <Group justify="center" mt="md" style={{ justifyContent: 'center' }}>
             <Badge color="green" size="md">{stats.winning_trades || 0} wins</Badge>
             <Badge color="red" size="md">{stats.losing_trades || 0} losses</Badge>
           </Group>
@@ -55,11 +55,11 @@ export function TradeStatsDisplay({ stats, formatCurrency }: TradeStatsProps) {
           <Text ta="center" fz="xl" fw={700}>
             {stats.total_trades || 0} Total
           </Text>
-          <Group position="center" mt="md" style={{ justifyContent: 'center' }}>
+          <Group justify="center" mt="md" style={{ justifyContent: 'center' }}>
             <Badge color="blue" size="md">{stats.open_trades || 0} open</Badge>
             <Badge color="gray" size="md">{stats.total_trades - stats.open_trades} closed</Badge>
           </Group>
-          <Group position="center" mt="md" style={{ justifyContent: 'center' }}>
+          <Group justify="center" mt="md" style={{ justifyContent: 'center' }}>
             <Text size="sm" fw={500}>Avg P/L:</Text>
             <Text 
               size="sm" 
@@ -86,16 +86,16 @@ export function TradeStatsDisplay({ stats, formatCurrency }: TradeStatsProps) {
           >
             {formatCurrency(stats.total_profit_loss || 0)}
           </Text>
-          <Group position="center" mt="md" style={{ justifyContent: 'center' }}>
-            <Group spacing={4}>
+          <Group justify="center" mt="md" style={{ justifyContent: 'center' }}>
+            <Group gap={4}>
               <Text size="sm" fw={500}>Best trade:</Text>
               <Text size="sm" fw={600} c="green">
                 {formatCurrency(stats.largest_win || 0)}
               </Text>
             </Group>
           </Group>
-          <Group position="center" mt="xs" style={{ justifyContent: 'center' }}>
-            <Group spacing={4}>
+          <Group justify="center" mt="xs" style={{ justifyContent: 'center' }}>
+            <Group gap={4}>
               <Text size="sm" fw={500}>Worst trade:</Text>
               <Text size="sm" fw={600} c="red">
                 {formatCurrency(Math.abs(stats.largest_loss || 0))}

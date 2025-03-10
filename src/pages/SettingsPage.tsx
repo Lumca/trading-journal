@@ -1,31 +1,30 @@
 // src/pages/SettingsPage.tsx
-import { useState, useEffect } from 'react';
 import {
-  Container,
-  Title,
-  Card,
-  Text,
-  Divider,
-  Switch,
-  Group,
-  Stack,
-  Button,
-  TextInput,
   ActionIcon,
-  Box,
-  Tabs,
   Alert,
-  MultiSelect,
-  Select,
-  Loader,
+  Box,
+  Button,
+  Card,
   Center,
-  PasswordInput
+  Container,
+  Divider,
+  Group,
+  Loader,
+  MultiSelect,
+  PasswordInput,
+  Stack,
+  Switch,
+  Tabs,
+  Text,
+  TextInput,
+  Title
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useSupabase } from '../contexts/SupabaseContext';
+import { IconCheck, IconInfoCircle, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { UserSettings, AssetClass } from '../lib/types';
-import { IconPlus, IconTrash, IconInfoCircle, IconCheck, IconX } from '@tabler/icons-react';
+import { useSupabase } from '../contexts/SupabaseContext';
+import { AssetClass, UserSettings } from '../lib/types';
 
 export function SettingsPage() {
   const { getUserSettings, updateUserSettings } = useSupabase();
@@ -35,7 +34,6 @@ export function SettingsPage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [newSymbol, setNewSymbol] = useState('');
   const [newIndicator, setNewIndicator] = useState('');
   const [newStrategy, setNewStrategy] = useState('');
@@ -90,10 +88,8 @@ export function SettingsPage() {
     setLoading(true);
     try {
       const settings = await getUserSettings();
-      setUserSettings(settings);
       if (settings) {
         form.setValues({
-          enable_registration: settings.enable_registration,
           custom_symbols: settings.custom_symbols || [],
           custom_indicators: settings.custom_indicators || [],
           custom_strategies: settings.custom_strategies || [],
@@ -116,12 +112,9 @@ export function SettingsPage() {
   const handleSaveSettings = async (values: typeof form.values) => {
     setSaving(true);
     try {
-      const updatedSettings = await updateUserSettings(values);
-      if (updatedSettings) {
-        setUserSettings(updatedSettings);
-      }
+      await updateUserSettings(values);
     } catch (error) {
-      console.error('Error saving settings:', error);
+      console.error('Error updating settings:', error);
     } finally {
       setSaving(false);
     }
@@ -239,7 +232,7 @@ export function SettingsPage() {
                 </Alert>
               </Stack>
               
-              <Group position="right" mt="xl">
+              <Group justify="right" mt="xl">
                 <Button type="submit" loading={saving}>
                   Save Settings
                 </Button>
@@ -343,7 +336,7 @@ export function SettingsPage() {
                         onChange={(e) => setNewSymbol(e.target.value)}
                         style={{ flexGrow: 1 }}
                       />
-                      <Button onClick={addSymbol} leftIcon={<IconPlus size={16} />}>
+                      <Button onClick={addSymbol} leftSection={<IconPlus size={16} />}>
                         Add
                       </Button>
                     </Group>
@@ -357,12 +350,11 @@ export function SettingsPage() {
                             <Button 
                               key={symbol}
                               variant="outline"
-                              rightIcon={
+                              rightSection={
                                 <ActionIcon size="xs" color="red" onClick={() => removeSymbol(symbol)}>
                                   <IconTrash size={14} />
                                 </ActionIcon>
                               }
-                              compact
                             >
                               {symbol}
                             </Button>
@@ -374,7 +366,7 @@ export function SettingsPage() {
                 </Tabs.Panel>
               </Tabs>
               
-              <Group position="right" mt="xl">
+              <Group justify="right" mt="xl">
                 <Button type="submit" loading={saving}>
                   Save Settings
                 </Button>
@@ -418,7 +410,7 @@ export function SettingsPage() {
                     onChange={(e) => setNewIndicator(e.target.value)}
                     style={{ flexGrow: 1 }}
                   />
-                  <Button onClick={addIndicator} leftIcon={<IconPlus size={16} />}>
+                  <Button onClick={addIndicator} leftSection={<IconPlus size={16} />}>
                     Add
                   </Button>
                 </Group>
@@ -432,12 +424,12 @@ export function SettingsPage() {
                         <Button 
                           key={indicator}
                           variant="outline"
-                          rightIcon={
+                          rightSection={
                             <ActionIcon size="xs" color="red" onClick={() => removeIndicator(indicator)}>
                               <IconTrash size={14} />
                             </ActionIcon>
                           }
-                          compact
+                          size="compact-md"
                         >
                           {indicator}
                         </Button>
@@ -447,7 +439,7 @@ export function SettingsPage() {
                 </Box>
               </Stack>
               
-              <Group position="right" mt="xl">
+              <Group justify="right" mt="xl">
                 <Button type="submit" loading={saving}>
                   Save Settings
                 </Button>
@@ -491,7 +483,7 @@ export function SettingsPage() {
                     onChange={(e) => setNewStrategy(e.target.value)}
                     style={{ flexGrow: 1 }}
                   />
-                  <Button onClick={addStrategy} leftIcon={<IconPlus size={16} />}>
+                  <Button onClick={addStrategy} leftSection={<IconPlus size={16} />}>
                     Add
                   </Button>
                 </Group>
@@ -505,12 +497,12 @@ export function SettingsPage() {
                         <Button 
                           key={strategy}
                           variant="outline"
-                          rightIcon={
+                          rightSection={
                             <ActionIcon size="xs" color="red" onClick={() => removeStrategy(strategy)}>
                               <IconTrash size={14} />
                             </ActionIcon>
                           }
-                          compact
+                          size="compact-md"
                         >
                           {strategy}
                         </Button>
@@ -520,7 +512,7 @@ export function SettingsPage() {
                 </Box>
               </Stack>
               
-              <Group position="right" mt="xl">
+              <Group justify="right" mt="xl">
                 <Button type="submit" loading={saving}>
                   Save Settings
                 </Button>
@@ -534,7 +526,7 @@ export function SettingsPage() {
             <Title order={3} mb="md">Security Settings</Title>
             
             <form onSubmit={passwordForm.onSubmit(handleChangePassword)}>
-              <Stack spacing="md">
+              <Stack gap="md">
                 {passwordSuccess && (
                   <Alert icon={<IconCheck size={16} />} color="green" title="Success">
                     Your password has been changed successfully.
@@ -561,7 +553,7 @@ export function SettingsPage() {
                   {...passwordForm.getInputProps('confirmPassword')}
                 />
                 
-                <Group position="right" mt="md">
+                <Group justify="right" mt="md">
                   <Button type="submit" loading={changingPassword}>
                     Change Password
                   </Button>

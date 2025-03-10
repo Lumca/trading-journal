@@ -1,28 +1,25 @@
 // src/pages/DashboardPage.tsx
-import { useState, useEffect } from 'react';
-import { 
-  Container, 
-  Title, 
-  Button, 
-  Group, 
-  Stack, 
-  Paper, 
-  Text, 
-  Badge,
-  Loader,
-  Center,
-  Box,
+import {
   ActionIcon,
+  Badge,
+  Center,
+  Container,
+  Group,
+  Loader,
+  Paper,
+  Stack,
+  Title,
   Tooltip
 } from '@mantine/core';
-import { TradeList } from '../components/TradeList';
-import { TradeView } from '../components/TradeView';
-import { TradeStatsDisplay } from '../components/TradeStats';
-import { useSupabase, TradeStats } from '../contexts/SupabaseContext';
-import { useJournal } from '../contexts/JournalContext';
-import { Trade } from '../lib/supabase';
-import { TradeDrawerButton } from '../components/TradeDrawerButton';
 import { IconRefresh } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
+import { TradeDrawerButton } from '../components/TradeDrawerButton';
+import { TradeList } from '../components/TradeList';
+import { TradeStatsDisplay } from '../components/TradeStats';
+import { TradeView } from '../components/TradeView';
+import { useJournal } from '../contexts/JournalContext';
+import { TradeStats, useSupabase } from '../contexts/SupabaseContext';
+import { Trade } from '../lib/supabase';
 
 export function DashboardPage() {
   const [viewTrade, setViewTrade] = useState<Trade | undefined>(undefined);
@@ -94,8 +91,8 @@ export function DashboardPage() {
 
   return (
     <Container size="xl" py="xl">
-      <Stack spacing="xl">
-        <Group position="apart">
+      <Stack gap="xl">
+        <Group justify="apart">
           {journalTitle}
           <Group>
             <Tooltip label="Refresh Data">
@@ -113,7 +110,7 @@ export function DashboardPage() {
 
         <TradeStatsDisplay stats={stats} formatCurrency={formatCurrency} />
 
-        <Group position="apart" mt="md">
+        <Group justify="apart" mt="md">
           <Title order={2}>Trades</Title>
         </Group>
 
@@ -129,6 +126,7 @@ export function DashboardPage() {
         ) : (
           <Paper p="md" shadow="xs" radius="md">
             <TradeList 
+              trades={trades}
               onViewTrade={handleViewTrade}
               journalId={selectedJournalId}
               onTradeUpdated={fetchData}

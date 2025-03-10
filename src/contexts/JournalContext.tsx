@@ -1,8 +1,8 @@
 // src/contexts/JournalContext.tsx
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useSupabase } from './SupabaseContext';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Journal } from '../lib/types';
 import { useAuth } from './AuthContext';
+import { useSupabase } from './SupabaseContext';
 
 interface JournalContextType {
   journals: Journal[];

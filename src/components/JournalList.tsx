@@ -1,9 +1,9 @@
 // src/components/JournalList.tsx
-import { useState, useEffect } from 'react';
-import { Table, Group, Badge, Button, Text, ActionIcon, Tooltip, Card, Box } from '@mantine/core';
+import { ActionIcon, Badge, Box, Group, Table, Text, Tooltip } from '@mantine/core';
+import { useEffect, useState } from 'react';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { Journal } from '../lib/types';
-import { FaEdit, FaTrash } from 'react-icons/fa';
 
 interface JournalListProps {
   onEditJournal: (journal: Journal) => void;

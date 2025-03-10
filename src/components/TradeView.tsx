@@ -1,33 +1,30 @@
 // src/components/TradeView.tsx
-import { useState, useEffect } from 'react';
 import {
-  Paper,
-  Title,
-  Text,
-  Group,
-  Stack,
-  Badge,
-  Button,
-  Grid,
-  Box,
-  Divider,
-  Card,
-  ActionIcon,
-  Tooltip,
-  Image,
-  SimpleGrid,
-  Center,
-  Loader,
-  Modal
+    ActionIcon,
+    Badge,
+    Box,
+    Button,
+    Card,
+    Center,
+    Grid,
+    Group,
+    Image,
+    Loader,
+    Modal,
+    Paper,
+    SimpleGrid,
+    Stack,
+    Text,
+    Title
 } from '@mantine/core';
-import { IconEdit, IconArrowLeft, IconMaximize } from '@tabler/icons-react';
-import { FaEye } from 'react-icons/fa';
-import { useSupabase } from '../contexts/SupabaseContext';
+import { IconArrowLeft, IconMaximize } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
 import { useJournal } from '../contexts/JournalContext';
+import { useSupabase } from '../contexts/SupabaseContext';
 import { Trade } from '../lib/supabase';
-import { Screenshot } from './TradeScreenshots';
 import { TradeEntry, TradeExit } from '../lib/types';
 import { TradeDrawerButton } from './TradeDrawerButton';
+import { Screenshot } from './TradeScreenshots';
 
 interface TradeViewProps {
   trade: Trade;
@@ -143,12 +140,12 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
 
   return (
     <Paper p="md" shadow="xs" radius="md">
-      <Stack spacing="md">
+      <Stack gap="md">
         {/* Header */}
-        <Group position="apart">
+        <Group justify="apart">
           <Group>
             <Button 
-              leftIcon={<IconArrowLeft size={16} />} 
+              leftSection={<IconArrowLeft size={16} />} 
               variant="light" 
               onClick={onBack}
             >
@@ -178,7 +175,7 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
         
         {/* Trade Summary */}
         <Card withBorder shadow="xs">
-          <Stack spacing={0}>
+          <Stack gap={0}>
             <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
               <Title order={4}>Trade Summary</Title>
             </Box>
@@ -186,42 +183,42 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
             <Box p="md">
               <Grid>
                 <Grid.Col span={6}>
-                  <Stack spacing="xs">
+                  <Stack gap="xs">
                     <Text fw={500}>Initial Entry Date</Text>
                     <Text>{formatDate(trade.entry_date)}</Text>
                   </Stack>
                 </Grid.Col>
                 
                 <Grid.Col span={6}>
-                  <Stack spacing="xs">
+                  <Stack gap="xs">
                     <Text fw={500}>Last Exit Date</Text>
                     <Text>{formatDate(trade.exit_date)}</Text>
                   </Stack>
                 </Grid.Col>
                 
                 <Grid.Col span={6}>
-                  <Stack spacing="xs">
+                  <Stack gap="xs">
                     <Text fw={500}>Average Entry Price</Text>
                     <Text>{formatCurrency(totals.avgEntryPrice)}</Text>
                   </Stack>
                 </Grid.Col>
                 
                 <Grid.Col span={6}>
-                  <Stack spacing="xs">
+                  <Stack gap="xs">
                     <Text fw={500}>Average Exit Price</Text>
                     <Text>{formatCurrency(totals.avgExitPrice)}</Text>
                   </Stack>
                 </Grid.Col>
                 
                 <Grid.Col span={6}>
-                  <Stack spacing="xs">
+                  <Stack gap="xs">
                     <Text fw={500}>Total Quantity</Text>
                     <Text>{totals.totalEntryQuantity}</Text>
                   </Stack>
                 </Grid.Col>
                 
                 <Grid.Col span={6}>
-                  <Stack spacing="xs">
+                  <Stack gap="xs">
                     <Text fw={500}>Strategy</Text>
                     <Text>{trade.strategy || '-'}</Text>
                   </Stack>
@@ -230,7 +227,7 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
                 {trade.status === 'closed' && (
                   <>
                     <Grid.Col span={6}>
-                      <Stack spacing="xs">
+                      <Stack gap="xs">
                         <Text fw={500}>P/L</Text>
                         <Text fw={700} c={trade.profit_loss && trade.profit_loss >= 0 ? 'green' : 'red'}>
                           {formatCurrency(trade.profit_loss)}
@@ -239,7 +236,7 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
                     </Grid.Col>
                     
                     <Grid.Col span={6}>
-                      <Stack spacing="xs">
+                      <Stack gap="xs">
                         <Text fw={500}>P/L %</Text>
                         <Text fw={700} c={trade.profit_loss_percent && trade.profit_loss_percent >= 0 ? 'green' : 'red'}>
                           {trade.profit_loss_percent?.toFixed(2)}%
@@ -255,17 +252,17 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
         
         {/* Entry Points */}
         <Card withBorder shadow="xs">
-          <Stack spacing={0}>
+          <Stack gap={0}>
             <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
               <Title order={4}>Entry Points</Title>
             </Box>
             
             <Box p="md">
               {entries && entries.length > 0 ? (
-                <Stack spacing="sm">
+                <Stack gap="sm">
                   {entries.map((entry, index) => (
                     <Card key={entry.id} p="xs" withBorder>
-                      <Group position="apart">
+                      <Group justify="apart">
                         <Text fw={500}>Entry #{index + 1}</Text>
                         <Text>{formatDate(entry.date)}</Text>
                       </Group>
@@ -290,17 +287,17 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
         
         {/* Exit Points */}
         <Card withBorder shadow="xs">
-          <Stack spacing={0}>
+          <Stack gap={0}>
             <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
               <Title order={4}>Exit Points & Orders</Title>
             </Box>
             
             <Box p="md">
               {exits && exits.length > 0 ? (
-                <Stack spacing="sm">
+                <Stack gap="sm">
                   {exits.map((exit, index) => (
                     <Card key={exit.id} p="xs" withBorder>
-                      <Group position="apart">
+                      <Group justify="apart">
                         <Group>
                           <Text fw={500}>Exit #{index + 1}</Text>
                           {exit.is_stop_loss && (
@@ -341,7 +338,7 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
         
         {/* Indicators */}
         <Card withBorder shadow="xs">
-          <Stack spacing={0}>
+          <Stack gap={0}>
             <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
               <Title order={4}>Technical Indicators</Title>
             </Box>
@@ -363,7 +360,7 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
         {/* Tags */}
         {trade.tags && trade.tags.length > 0 && (
           <Card withBorder shadow="xs">
-            <Stack spacing={0}>
+            <Stack gap={0}>
               <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
                 <Title order={4}>Tags</Title>
               </Box>
@@ -382,7 +379,7 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
         {/* Notes */}
         {trade.notes && (
           <Card withBorder shadow="xs">
-            <Stack spacing={0}>
+            <Stack gap={0}>
               <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
                 <Title order={4}>Notes</Title>
               </Box>
@@ -397,7 +394,7 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
         {/* Screenshots */}
         {screenshots.length > 0 && (
           <Card withBorder shadow="xs">
-            <Stack spacing={0}>
+            <Stack gap={0}>
               <Box p="md" style={{ borderBottom: '1px solid #eee' }}>
                 <Title order={4}>Screenshots</Title>
               </Box>

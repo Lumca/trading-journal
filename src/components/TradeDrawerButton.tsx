@@ -1,9 +1,9 @@
 // src/components/TradeDrawerButton.tsx
+import { ActionIcon, Button, Tooltip } from '@mantine/core';
+import { IconEdit, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
-import { Button, Tooltip, ActionIcon } from '@mantine/core';
-import { IconPlus, IconEdit } from '@tabler/icons-react';
-import { TradeDrawerForm } from './TradeDrawerForm';
 import { Trade } from '../lib/supabase';
+import { TradeDrawerForm } from './TradeDrawerForm';
 
 interface TradeDrawerButtonProps {
   mode: 'add' | 'edit';
@@ -61,10 +61,9 @@ export function TradeDrawerButton({
     return (
       <>
         <Button
-          leftIcon={<IconPlus size={16} />}
+          leftSection={<IconPlus size={16} />}
           onClick={handleOpen}
           size={size}
-          compact={compact}
         >
           {compact ? '' : 'Add Trade'}
         </Button>

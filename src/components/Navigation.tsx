@@ -1,12 +1,12 @@
 // src/components/Navigation.tsx
-import { NavLink, Box, rem } from '@mantine/core';
-import { 
-  IconDashboard, 
-  IconChartBar, 
-  IconSettings, 
+import { Box, NavLink, rem } from '@mantine/core';
+import {
+  IconBook,
   IconCalendar,
+  IconChartBar,
+  IconDashboard,
   IconLogout,
-  IconBook
+  IconSettings
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -53,7 +53,7 @@ export function Navigation({ opened, onClose, onNavigate, active, isCollapsed }:
             mb={rem(8)}
             p={isCollapsed ? 'xs' : undefined}
             childrenOffset={isCollapsed ? 0 : undefined}
-            justifyContent={isCollapsed ? 'center' : undefined}
+            className={isCollapsed ? 'center' : undefined}
           />
         ))}
       </Box>
@@ -64,7 +64,7 @@ export function Navigation({ opened, onClose, onNavigate, active, isCollapsed }:
           leftSection={<IconLogout size={24} stroke={1.5} />}
           onClick={handleSignOut}
           p={isCollapsed ? 'xs' : undefined}
-          justifyContent={isCollapsed ? 'center' : undefined}
+          className={isCollapsed ? 'center' : undefined}
         />
       </Box>
     </Box>

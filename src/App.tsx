@@ -1,42 +1,41 @@
 // src/App.tsx
+import {
+  AppShell,
+  Box,
+  Burger,
+  Divider,
+  Group,
+  MantineProvider,
+  Text,
+  Title,
+  createTheme,
+  useMantineTheme
+} from '@mantine/core';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
-import { 
-  MantineProvider, 
-  createTheme, 
-  AppShell,
-  Group, 
-  Title, 
-  Button,
-  Burger,
-  Text,
-  Box,
-  useMantineTheme,
-  Divider
-} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { JournalSelector } from './components/JournalSelector';
+import { Navigation } from './components/Navigation';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { JournalProvider } from './contexts/JournalContext';
+import { SupabaseProvider } from './contexts/SupabaseContext';
+import { CalendarPage } from './pages/CalendarPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { JournalsPage } from './pages/JournalsPage';
-import { SettingsPage } from './pages/SettingsPage';
 import { LoginPage } from './pages/LoginPage';
-import { SupabaseProvider } from './contexts/SupabaseContext';
-import { JournalProvider } from './contexts/JournalContext';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Navigation } from './components/Navigation';
-import { JournalSelector } from './components/JournalSelector';
-import { CalendarPage } from './pages/CalendarPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { StatisticsPage } from './pages/StatisticsPage';
 
 // Define a custom theme
 const theme = createTheme({
   primaryColor: 'blue',
   defaultRadius: 'md',
-  // You can customize colors, fonts, spacing, etc. here
+  // You can customize colors, fonts, gap, etc. here
 });
 
 function AppContent() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
   const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
   const theme = useMantineTheme();

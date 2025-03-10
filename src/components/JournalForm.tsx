@@ -1,23 +1,23 @@
 // src/components/JournalForm.tsx
-import { useState } from 'react';
 import {
-  TextInput,
+  ActionIcon,
   Button,
   Group,
-  Stack,
-  Textarea,
   Paper,
-  Title,
-  ActionIcon,
-  Tooltip,
+  Select,
+  Stack,
   Switch,
-  Select
+  Textarea,
+  TextInput,
+  Title,
+  Tooltip
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useSupabase } from '../contexts/SupabaseContext';
-import { useJournal } from '../contexts/JournalContext';
-import { Journal, NewJournal } from '../lib/types';
+import { useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
+import { useJournal } from '../contexts/JournalContext';
+import { useSupabase } from '../contexts/SupabaseContext';
+import { Journal, NewJournal } from '../lib/types';
 
 interface JournalFormProps {
   editJournal?: Journal;
@@ -88,7 +88,7 @@ export function JournalForm({ editJournal, onSuccess, onCancel }: JournalFormPro
 
   return (
     <Paper p="md" shadow="xs" radius="md">
-      <Group position="apart" mb="md">
+      <Group mb="md">
         <Title order={3}>{editJournal ? 'Edit Journal' : 'Create New Journal'}</Title>
         <Tooltip label="Close">
           <ActionIcon onClick={onCancel} variant="subtle">
@@ -98,7 +98,7 @@ export function JournalForm({ editJournal, onSuccess, onCancel }: JournalFormPro
       </Group>
 
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Stack spacing="md">
+        <Stack>
           <TextInput
             required
             label="Journal Name"
@@ -135,7 +135,7 @@ export function JournalForm({ editJournal, onSuccess, onCancel }: JournalFormPro
             description="Inactive journals can be archived without deletion"
           />
 
-          <Group position="right" mt="md">
+          <Group justify="right" mt="md">
             <Button variant="outline" onClick={onCancel}>
               Cancel
             </Button>

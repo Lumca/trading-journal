@@ -1,50 +1,49 @@
 // src/pages/StatisticsPage.tsx
-import { useState, useEffect } from 'react';
-import { 
-  Container, 
-  Title, 
-  Stack, 
-  Paper, 
-  Grid, 
-  Text, 
-  Group, 
-  Select, 
-  Tabs, 
-  RingProgress,
-  SegmentedControl,
-  Loader,
-  Center,
+import {
   Card,
+  Center,
+  Container,
+  Grid,
+  Group,
+  Loader,
+  Paper,
+  SegmentedControl,
+  Select,
+  Stack,
+  Tabs,
+  Text,
+  Title,
   useMantineTheme
 } from '@mantine/core';
-import { 
-  IconChartPie, 
-  IconChartBar, 
-  IconCalendarStats, 
-  IconCoin,
+import {
+  IconArrowDownRight,
   IconArrowUpRight,
-  IconArrowDownRight
+  IconCalendarStats,
+  IconChartBar,
+  IconChartPie,
+  IconCoin
 } from '@tabler/icons-react';
-import { useSupabase } from '../contexts/SupabaseContext';
-import { useJournal } from '../contexts/JournalContext';
-import { Trade } from '../lib/supabase';
+import { useEffect, useState } from 'react';
 import { TradeStatsDisplay } from '../components/TradeStats';
+import { useJournal } from '../contexts/JournalContext';
+import { useSupabase } from '../contexts/SupabaseContext';
+import { Trade } from '../lib/supabase';
 
 // Chart components
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  LineChart,
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
   Line,
-  PieChart,
+  LineChart,
   Pie,
-  Cell
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
 
 export function StatisticsPage() {
@@ -364,8 +363,8 @@ export function StatisticsPage() {
 
   return (
     <Container size="xl" py="xl">
-      <Stack spacing="xl">
-        <Group position="apart">
+      <Stack gap="xl">
+        <Group justify="apart">
           <Title order={1}>Trading Statistics</Title>
           
           <Select
@@ -386,25 +385,25 @@ export function StatisticsPage() {
         {/* Summary statistics */}
         <TradeStatsDisplay stats={stats} formatCurrency={formatCurrency} />
 
-        <Tabs value={activeTab} onChange={setActiveTab}>
+        <Tabs value={activeTab} onChange={(value) => setActiveTab(value || 'performance')}>
           <Tabs.List>
-            <Tabs.Tab value="performance" icon={<IconChartBar size={14} />}>
+            <Tabs.Tab value="performance" leftSection={<IconChartBar size={14} />}>
               Performance
             </Tabs.Tab>
-            <Tabs.Tab value="strategies" icon={<IconChartPie size={14} />}>
+            <Tabs.Tab value="strategies" leftSection={<IconChartPie size={14} />}>
               Strategies
             </Tabs.Tab>
-            <Tabs.Tab value="distribution" icon={<IconCalendarStats size={14} />}>
+            <Tabs.Tab value="distribution" leftSection={<IconCalendarStats size={14} />}>
               Distribution
             </Tabs.Tab>
-            <Tabs.Tab value="equity" icon={<IconCoin size={14} />}>
+            <Tabs.Tab value="equity" leftSection={<IconCoin size={14} />}>
               Equity Curve
             </Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="performance" pt="md">
             <Paper p="md" shadow="xs" radius="md">
-              <Group position="apart" mb="lg">
+              <Group justify="apart" mb="lg">
                 <Title order={3}>Performance by Period</Title>
                 <SegmentedControl
                   value={performanceGrouping}
@@ -482,7 +481,7 @@ export function StatisticsPage() {
 
           <Tabs.Panel value="distribution" pt="md">
             <Grid>
-              <Grid.Col md={6}>
+              <Grid.Col span={6}>
                 <Paper p="md" shadow="xs" radius="md" style={{ height: '100%' }}>
                   <Title order={3} mb="md">Trade Distribution by Asset Class</Title>
                   <ResponsiveContainer width="100%" height={300}>
@@ -497,18 +496,18 @@ export function StatisticsPage() {
                         label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                         labelLine={false}
                       >
-                        {getAssetClassDistribution().map((entry, index) => (
+                        {getAssetClassDistribution().map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip 
-                        formatter={(value, name, props) => [`${value} trades`, name]} 
+                        formatter={(value, name) => [`${value} trades`, name]} 
                       />
                     </PieChart>
                   </ResponsiveContainer>
                 </Paper>
               </Grid.Col>
-              <Grid.Col md={6}>
+              <Grid.Col span={6}>
                 <Paper p="md" shadow="xs" radius="md" style={{ height: '100%' }}>
                   <Title order={3} mb="md">Profit/Loss by Asset Class</Title>
                   <ResponsiveContainer width="100%" height={300}>
@@ -576,9 +575,9 @@ export function StatisticsPage() {
 
         {/* Additional statistics cards */}
         <Grid>
-          <Grid.Col md={4}>
+          <Grid.Col span={4}>
             <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Group position="apart">
+              <Group justify="apart">
                 <Text fw={500}>Best Trading Day</Text>
                 <IconArrowUpRight color={theme.colors.green[6]} />
               </Group>
@@ -597,9 +596,9 @@ export function StatisticsPage() {
             </Card>
           </Grid.Col>
           
-          <Grid.Col md={4}>
+          <Grid.Col span={4}>
             <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Group position="apart">
+              <Group justify="apart">
                 <Text fw={500}>Worst Trading Day</Text>
                 <IconArrowDownRight color={theme.colors.red[6]} />
               </Group>
@@ -616,9 +615,9 @@ export function StatisticsPage() {
             </Card>
           </Grid.Col>
           
-          <Grid.Col md={4}>
+          <Grid.Col span={4}>
             <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Group position="apart">
+              <Group justify="apart">
                 <Text fw={500}>Average Trade Duration</Text>
               </Group>
               

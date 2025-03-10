@@ -1,22 +1,22 @@
 // src/components/TradeScreenshots.tsx
-import { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Text, 
-  Group, 
-  Stack, 
-  Image as MantineImage, 
-  FileButton, 
-  Button, 
-  ActionIcon, 
-  Card, 
-  SimpleGrid, 
+import {
+  ActionIcon,
+  Box,
+  Button,
+  Card,
+  FileButton,
+  Group,
+  Image as MantineImage,
   Modal,
   NumberInput,
   Select,
-  Slider
+  SimpleGrid,
+  Slider,
+  Stack,
+  Text
 } from '@mantine/core';
-import { IconUpload, IconTrash, IconMaximize, IconResize } from '@tabler/icons-react';
+import { IconMaximize, IconTrash, IconUpload } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
 import { useSupabase } from '../contexts/SupabaseContext';
 
 interface TradeScreenshotsProps {
@@ -254,8 +254,8 @@ export function TradeScreenshots({ tradeId, screenshots, onScreenshotsChange }: 
 
   return (
     <>
-      <Stack spacing="md">
-        <Group position="apart">
+      <Stack gap="md">
+        <Group justify="apart">
           <Text size="sm" fw={500}>Trade Screenshots</Text>
           <FileButton 
             onChange={handleFilesSelected} 
@@ -265,7 +265,7 @@ export function TradeScreenshots({ tradeId, screenshots, onScreenshotsChange }: 
             {(props) => (
               <Button 
                 {...props} 
-                leftIcon={<IconUpload size={16} />} 
+                leftSection={<IconUpload size={16} />} 
                 size="sm"
                 loading={uploading}
               >
@@ -293,8 +293,8 @@ export function TradeScreenshots({ tradeId, screenshots, onScreenshotsChange }: 
                       withPlaceholder
                     />
                     <Group 
-                      position="right" 
-                      spacing={4}
+                      justify="right" 
+                      gap={4}
                       style={{ 
                         position: 'absolute', 
                         top: 5, 

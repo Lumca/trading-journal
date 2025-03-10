@@ -1,7 +1,7 @@
 // src/components/JournalSelector.tsx
 import { Select, Skeleton } from '@mantine/core';
-import { useJournal } from '../contexts/JournalContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useJournal } from '../contexts/JournalContext';
 
 export function JournalSelector() {
   const { journals, selectedJournalId, setSelectedJournalId, loading } = useJournal();

@@ -1,32 +1,30 @@
 // src/pages/JournalsPage.tsx
-import { useState, useEffect } from 'react';
 import {
-  Container,
-  Title,
+  ActionIcon,
+  Badge,
   Button,
+  Card,
+  Center,
+  Container,
+  Grid,
   Group,
-  Stack,
+  Loader,
   Paper,
   Text,
-  Grid,
-  Card,
-  Badge,
-  Box,
-  Center,
-  Loader,
-  ActionIcon,
+  Title,
   Tooltip
 } from '@mantine/core';
-import { useSupabase } from '../contexts/SupabaseContext';
-import { useJournal } from '../contexts/JournalContext';
-import { Journal } from '../lib/types';
-import { JournalList } from '../components/JournalList';
+import { IconPlus, IconRefresh } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
 import { JournalForm } from '../components/JournalForm';
+import { JournalList } from '../components/JournalList';
+import { TradeDrawerButton } from '../components/TradeDrawerButton';
 import { TradeList } from '../components/TradeList';
 import { TradeView } from '../components/TradeView';
+import { useJournal } from '../contexts/JournalContext';
+import { useSupabase } from '../contexts/SupabaseContext';
 import { Trade } from '../lib/supabase';
-import { IconPlus, IconRefresh } from '@tabler/icons-react';
-import { TradeDrawerButton } from '../components/TradeDrawerButton';
+import { Journal } from '../lib/types';
 
 export function JournalsPage() {
   const [showJournalForm, setShowJournalForm] = useState(false);
@@ -115,10 +113,10 @@ export function JournalsPage() {
     <Container size="xl" py="xl">
       {view === 'journals' ? (
         <>
-          <Group position="apart" mb="xl">
+          <Group justify="apart" mb="xl">
             <Title order={1}>Trading Journals</Title>
             <Button 
-              leftIcon={<IconPlus size={16} />}
+              leftSection={<IconPlus size={16} />}
               onClick={() => setShowJournalForm(true)}
               disabled={showJournalForm}
             >
@@ -143,7 +141,7 @@ export function JournalsPage() {
         </>
       ) : (
         <>
-          <Group position="apart" mb="xl">
+          <Group justify="apart" mb="xl">
             <Group>
               <Button variant="outline" onClick={handleBackToJournals}>
                 Back to Journals
@@ -184,7 +182,7 @@ export function JournalsPage() {
                       <Text ta="center" fz="xl" fw={700} c={journalStats?.win_rate >= 50 ? 'green' : 'red'}>
                         {journalStats?.win_rate?.toFixed(1) || 0}%
                       </Text>
-                      <Group position="center" spacing="sm" mt="sm" style={{ justifyContent: 'center' }}>
+                      <Group justify="center" gap="sm" mt="sm" style={{ justifyContent: 'center' }}>
                         <Badge color="green">{journalStats?.winning_trades || 0} wins</Badge>
                         <Badge color="red">{journalStats?.losing_trades || 0} losses</Badge>
                       </Group>
@@ -200,7 +198,7 @@ export function JournalsPage() {
                       <Text ta="center" fz="xl" fw={700}>
                         {journalStats?.total_trades || 0}
                       </Text>
-                      <Group position="center" mt="sm" style={{ justifyContent: 'center' }}>
+                      <Group justify="center" mt="sm" style={{ justifyContent: 'center' }}>
                         <Badge color="blue">{journalStats?.open_trades || 0} open positions</Badge>
                         <Badge color="gray">{journalStats ? (journalStats.total_trades - journalStats.open_trades) : 0} closed</Badge>
                       </Group>
@@ -214,15 +212,15 @@ export function JournalsPage() {
                         c={journalStats?.total_profit_loss >= 0 ? 'green' : 'red'}>
                         {formatCurrency(journalStats?.total_profit_loss || 0)}
                       </Text>
-                      <Group position="center" spacing="sm" mt="sm" style={{ justifyContent: 'center' }}>
-                        <Group spacing={4}>
+                      <Group justify="center" gap="sm" mt="sm" style={{ justifyContent: 'center' }}>
+                        <Group gap={4}>
                           <Text size="sm" fw={500}>Best:</Text>
                           <Text size="sm" c="green">
                             {formatCurrency(journalStats?.largest_win || 0)}
                           </Text>
                         </Group>
                         <Text size="sm">•</Text>
-                        <Group spacing={4}>
+                        <Group gap={4}>
                           <Text size="sm" fw={500}>Worst:</Text>
                           <Text size="sm" c="red">
                             {formatCurrency(Math.abs(journalStats?.largest_loss || 0))}

@@ -1,31 +1,29 @@
 // src/components/TradeCalendar.tsx
-import { useState, useEffect } from 'react';
-import { 
-  Paper, 
-  Title, 
-  Text, 
-  Group, 
-  Badge, 
-  Grid, 
-  Box, 
-  Button, 
-  Select,
+import {
   ActionIcon,
-  Tooltip,
-  Popover,
+  Badge,
+  Box,
+  Button,
   Card,
-  Divider,
   Center,
-  Loader
+  Divider,
+  Grid,
+  Group,
+  Loader,
+  Popover,
+  Select,
+  Text,
+  Title,
+  Tooltip
 } from '@mantine/core';
-import { 
-  IconChevronLeft, 
-  IconChevronRight, 
-  IconRefresh,
-  IconCalendarEvent
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconRefresh
 } from '@tabler/icons-react';
-import { useSupabase } from '../contexts/SupabaseContext';
+import { useEffect, useState } from 'react';
 import { useJournal } from '../contexts/JournalContext';
+import { useSupabase } from '../contexts/SupabaseContext';
 import { Trade } from '../lib/supabase';
 import { TradeDrawerButton } from './TradeDrawerButton';
 
@@ -338,7 +336,7 @@ export function TradeCalendar({ journalId }: CalendarProps) {
             <Popover.Target>
               <Box mt={4} style={{ cursor: 'pointer' }}>
                 {dayEntries.length > 0 && (
-                  <Group spacing={4}>
+                  <Group gap={4}>
                     {longEntries > 0 && (
                       <Badge color="green" size="xs">
                         {longEntries} Long
@@ -384,8 +382,8 @@ export function TradeCalendar({ journalId }: CalendarProps) {
                   
                   {dayEntries.map(trade => (
                     <Card key={`entry-${trade.id}`} p="xs" withBorder mt={4}>
-                      <Group position="apart" mb={4}>
-                        <Group spacing={4}>
+                      <Group justify="apart" mb={4}>
+                        <Group gap={4}>
                           <Text size="sm" fw={700}>
                             {trade.symbol}
                           </Text>
@@ -425,8 +423,8 @@ export function TradeCalendar({ journalId }: CalendarProps) {
                   
                   {dayExits.map(trade => (
                     <Card key={`exit-${trade.id}`} p="xs" withBorder mt={4}>
-                      <Group position="apart" mb={4}>
-                        <Group spacing={4}>
+                      <Group justify="apart" mb={4}>
+                        <Group gap={4}>
                           <Text size="sm" fw={700}>
                             {trade.symbol}
                           </Text>
@@ -464,7 +462,7 @@ export function TradeCalendar({ journalId }: CalendarProps) {
                   
                   <Divider my="xs" />
                   
-                  <Group position="apart">
+                  <Group justify="apart">
                     <Text size="sm" fw={500}>
                       Net P/L:
                     </Text>
@@ -668,7 +666,7 @@ export function TradeCalendar({ journalId }: CalendarProps) {
 
   return (
     <>
-      <Group position="apart" mb="md">
+      <Group justify="apart" mb="md">
         <Group>
           <Title order={3}>{journalTitle}</Title>
           <Tooltip label="Refresh">
@@ -700,7 +698,7 @@ export function TradeCalendar({ journalId }: CalendarProps) {
         </Group>
       </Group>
       
-      <Group position="apart" mb="md">
+      <Group justify="apart" mb="md">
         <ActionIcon 
           variant="subtle" 
           size="lg" 

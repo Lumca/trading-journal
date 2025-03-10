@@ -1,20 +1,17 @@
 // src/pages/LoginPage.tsx
-import { useState } from 'react';
 import {
-  TextInput,
-  PasswordInput,
-  Paper,
-  Title,
-  Container,
-  Button,
-  Text,
   Anchor,
-  Group,
-  Divider,
+  Button,
+  Container,
+  Paper,
+  PasswordInput,
   Stack,
-  Box,
+  Text,
+  TextInput,
+  Title
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 type FormMode = 'login' | 'register' | 'forgotPassword';

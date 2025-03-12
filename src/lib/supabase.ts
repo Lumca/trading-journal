@@ -31,6 +31,17 @@ export interface Trade {
     profit_loss?: number;
     profit_loss_percent?: number;
     journal_id?: number;
+    fees?: number; // New field
+    fee_details?: FeeDetails; // New field
+}
+
+// New interface for detailed fee information
+export interface FeeDetails {
+    entry_commission?: number;
+    exit_commission?: number;
+    swap_fees?: number;
+    exchange_fees?: number;
+    other_fees?: number;
 }
 
 export type NewTrade = Omit<Trade, 'id' | 'created_at' | 'user_id' | 'profit_loss' | 'profit_loss_percent'>;

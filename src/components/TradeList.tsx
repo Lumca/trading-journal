@@ -1,4 +1,4 @@
-// src/components/TradeList.tsx
+// src/components/TradeList.tsx - Adding fees column
 import {
   ActionIcon,
   Badge,
@@ -88,6 +88,15 @@ export function TradeList({ onViewTrade, journalId, onTradeUpdated }: TradeListP
     }).format(value);
   };
 
+  // Calculate net profit/loss (with fees)
+  const calculateNetPL = (trade: Trade) => {
+    if (trade.status !== 'closed' || trade.profit_loss === undefined) return null;
+    
+    const grossPL = trade.profit_loss;
+    const fees = trade.fees || 0;
+    return grossPL - fees;
+  };
+
   if (loading) {
     return (
       <Center p="xl">
@@ -121,6 +130,7 @@ export function TradeList({ onViewTrade, journalId, onTradeUpdated }: TradeListP
           value={statusFilter}
           onChange={setStatusFilter}
           data={[
+            { value: 'planned', label: 'Planned Trades' },
             { value: 'open', label: 'Open Trades' },
             { value: 'closed', label: 'Closed Trades' }
           ]}
@@ -138,74 +148,96 @@ export function TradeList({ onViewTrade, journalId, onTradeUpdated }: TradeListP
             <Table.Th>Entry Price</Table.Th>
             <Table.Th>Quantity</Table.Th>
             <Table.Th>Status</Table.Th>
+            <Table.Th>Fees</Table.Th>
             <Table.Th>P/L</Table.Th>
             <Table.Th>P/L %</Table.Th>
             <Table.Th>Actions</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {filteredTrades.map((trade) => (
-            <Table.Tr key={trade.id}>
-              <Table.Td>{trade.symbol}</Table.Td>
-              <Table.Td>
-                <Badge color={trade.direction === 'long' ? 'green' : 'red'}>
-                  {trade.direction.toUpperCase()}
-                </Badge>
-              </Table.Td>
-              <Table.Td>{new Date(trade.entry_date).toLocaleDateString()}</Table.Td>
-              <Table.Td>{formatCurrency(trade.entry_price)}</Table.Td>
-              <Table.Td>{trade.quantity}</Table.Td>
-              <Table.Td>
-                <Badge color={trade.status === 'open' ? 'blue' : 'green'}>
-                  {trade.status.toUpperCase()}
-                </Badge>
-              </Table.Td>
-              <Table.Td>
-                {trade.profit_loss !== undefined ? (
-                  <Text c={trade.profit_loss >= 0 ? 'green' : 'red'} fw={700}>
-                    {formatCurrency(trade.profit_loss)}
-                  </Text>
-                ) : (
-                  '-'
-                )}
-              </Table.Td>
-              <Table.Td>
-                {trade.profit_loss_percent !== undefined ? (
-                  <Text c={trade.profit_loss_percent >= 0 ? 'green' : 'red'} fw={700}>
-                    {trade.profit_loss_percent?.toFixed(2)}%
-                  </Text>
-                ) : (
-                  '-'
-                )}
-              </Table.Td>
-              <Table.Td>
-                <Group gap="xs">
-                  {onViewTrade && (
-                    <Tooltip label="View Details">
-                      <ActionIcon variant="subtle" color="gray" onClick={() => onViewTrade(trade)}>
-                        <FaEye />
+          {filteredTrades.map((trade) => {
+            const netPL = calculateNetPL(trade);
+            
+            return (
+              <Table.Tr key={trade.id}>
+                <Table.Td>{trade.symbol}</Table.Td>
+                <Table.Td>
+                  <Badge color={trade.direction === 'long' ? 'green' : 'red'}>
+                    {(trade.direction || '').toUpperCase()}
+                  </Badge>
+                </Table.Td>
+                <Table.Td>{new Date(trade.entry_date).toLocaleDateString()}</Table.Td>
+                <Table.Td>{formatCurrency(trade.entry_price)}</Table.Td>
+                <Table.Td>{trade.quantity}</Table.Td>
+                <Table.Td>
+                  <Badge color={
+                    trade.status === 'open' ? 'blue' : 
+                    trade.status === 'planned' ? 'yellow' : 
+                    'green'
+                  }>
+                    {trade.status === 'planned' ? 'PLANNED' : trade.status.toUpperCase()}
+                  </Badge>
+                </Table.Td>
+                <Table.Td>
+                  {trade.fees ? (
+                    <Text c="red">
+                      {formatCurrency(trade.fees)}
+                    </Text>
+                  ) : (
+                    '-'
+                  )}
+                </Table.Td>
+                <Table.Td>
+                  {trade.status === 'planned' ? (
+                    <Text c="dimmed" fs="italic">Planned</Text>
+                  ) : netPL !== null ? (
+                    <Text c={netPL >= 0 ? 'green' : 'red'} fw={700}>
+                      {formatCurrency(netPL)}
+                    </Text>
+                  ) : (
+                    '-'
+                  )}
+                </Table.Td>
+                <Table.Td>
+                  {trade.status === 'planned' ? (
+                    <Text c="dimmed" fs="italic">-</Text>
+                  ) : trade.profit_loss_percent !== undefined ? (
+                    <Text c={trade.profit_loss_percent >= 0 ? 'green' : 'red'} fw={700}>
+                      {trade.profit_loss_percent?.toFixed(2)}%
+                    </Text>
+                  ) : (
+                    '-'
+                  )}
+                </Table.Td>
+                <Table.Td>
+                  <Group gap="xs">
+                    {onViewTrade && (
+                      <Tooltip label="View Details">
+                        <ActionIcon variant="subtle" color="gray" onClick={() => onViewTrade(trade)}>
+                          <FaEye />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                    <TradeDrawerButton
+                      mode="edit"
+                      trade={trade}
+                      onSuccess={() => {
+                        fetchTrades();
+                        if (onTradeUpdated) onTradeUpdated();
+                      }}
+                      size="sm"
+                      iconOnly
+                    />
+                    <Tooltip label="Delete">
+                      <ActionIcon variant="subtle" color="red" onClick={() => handleDeleteTrade(trade.id)}>
+                        <FaTrash />
                       </ActionIcon>
                     </Tooltip>
-                  )}
-                  <TradeDrawerButton
-                    mode="edit"
-                    trade={trade}
-                    onSuccess={() => {
-                      fetchTrades();
-                      if (onTradeUpdated) onTradeUpdated();
-                    }}
-                    size="sm"
-                    iconOnly
-                  />
-                  <Tooltip label="Delete">
-                    <ActionIcon variant="subtle" color="red" onClick={() => handleDeleteTrade(trade.id)}>
-                      <FaTrash />
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
-              </Table.Td>
-            </Table.Tr>
-          ))}
+                  </Group>
+                </Table.Td>
+              </Table.Tr>
+            );
+          })}
         </Table.Tbody>
       </Table>
     </Box>

@@ -89,18 +89,19 @@ export function SettingsPage() {
     try {
       const settings = await getUserSettings();
       if (settings) {
-        form.setValues({
-          custom_symbols: settings.custom_symbols || [],
-          custom_indicators: settings.custom_indicators || [],
-          custom_strategies: settings.custom_strategies || [],
-          default_asset_classes: settings.default_asset_classes || {
-            forex: [],
-            crypto: [],
-            stocks: []
-          },
-          default_indicators: settings.default_indicators || [],
-          default_strategies: settings.default_strategies || []
-        });
+          form.setValues({
+        enable_registration: settings.enable_registration !== undefined ? settings.enable_registration : true,
+        custom_symbols: settings.custom_symbols || [],
+        custom_indicators: settings.custom_indicators || [],
+        custom_strategies: settings.custom_strategies || [],
+        default_asset_classes: settings.default_asset_classes || {
+          forex: [],
+          crypto: [],
+          stocks: []
+        },
+        default_indicators: settings.default_indicators || [],
+        default_strategies: settings.default_strategies || []
+      });
       }
     } catch (error) {
       console.error('Error fetching settings:', error);

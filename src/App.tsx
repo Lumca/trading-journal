@@ -27,11 +27,25 @@ import { LoginPage } from './pages/LoginPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { StatisticsPage } from './pages/StatisticsPage';
 
-// Define a custom theme
+// Define a custom theme with dark mode enabled by default
 const theme = createTheme({
-  primaryColor: 'blue',
-  defaultRadius: 'md',
-  // You can customize colors, fonts, gap, etc. here
+  fontFamily: 'Open Sans, sans-serif',
+  primaryColor: 'cyan',
+  colors: {
+      // override dark colors here to change them for all components
+      dark: [
+        '#d5d7e0',
+        '#acaebf',
+        '#8c8fa3',
+        '#666980',
+        '#4d4f66',
+        '#34354a',
+        '#2b2c3d',
+        '#1d1e30',
+        '#0c0d21',
+        '#01010a',
+      ],
+    },
 });
 
 function AppContent() {
@@ -83,41 +97,41 @@ function AppContent() {
       header={{ height: 60 }}
     >
       <AppShell.Header>
-  <Group h="100%" px="md" justify="space-between">
-    <Group>
-      <Burger
-        opened={mobileOpened}
-        onClick={toggleMobile}
-        size="sm"
-        color={theme.colors.gray[6]}
-        hiddenFrom="sm"
-      />
-      <Burger
-        opened={desktopOpened}
-        onClick={toggleDesktop}
-        size="sm"
-        color={theme.colors.gray[6]}
-        visibleFrom="sm"
-      />
-      <Title order={3}>Trading Journal</Title>
-    </Group>
-    
-    <Group>
-      {/* Only show journal selector when logged in and on certain pages */}
-      {user && ['dashboard', 'journals', 'statistics', 'calendar'].includes(activeView) && (
-        <Box style={{ width: '200px' }}>
-          <JournalSelector />
-        </Box>
-      )}
-      {user && <Divider orientation="vertical" />}
-      {user && (
-        <Text size="sm" fw={500}>
-          {user.email}
-        </Text>
-      )}
-    </Group>
-  </Group>
-</AppShell.Header>
+        <Group h="100%" px="md" justify="space-between">
+          <Group>
+            <Burger
+              opened={mobileOpened}
+              onClick={toggleMobile}
+              size="sm"
+              color={theme.colors.gray[6]}
+              hiddenFrom="sm"
+            />
+            <Burger
+              opened={desktopOpened}
+              onClick={toggleDesktop}
+              size="sm"
+              color={theme.colors.gray[6]}
+              visibleFrom="sm"
+            />
+            <Title order={3}>Trading Journal</Title>
+          </Group>
+          
+          <Group>
+            {/* Only show journal selector when logged in and on certain pages */}
+            {user && ['dashboard', 'journals', 'statistics', 'calendar'].includes(activeView) && (
+              <Box style={{ width: '200px' }}>
+                <JournalSelector />
+              </Box>
+            )}
+            {user && <Divider orientation="vertical" />}
+            {user && (
+              <Text size="sm" fw={500}>
+                {user.email}
+              </Text>
+            )}
+          </Group>
+        </Group>
+      </AppShell.Header>
 
       <AppShell.Navbar p="md">
         <Navigation
@@ -130,22 +144,22 @@ function AppContent() {
       </AppShell.Navbar>
 
       <AppShell.Main>
-  <Routes>
-    <Route path="/dashboard" element={<DashboardPage />} />
-    <Route path="/journals" element={<JournalsPage />} />
-    <Route path="/statistics" element={<StatisticsPage />} />
-    <Route path="/calendar" element={<CalendarPage />} />
-    <Route path="/settings" element={<SettingsPage />} />
-    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-  </Routes>
-</AppShell.Main>
+        <Routes>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/journals" element={<JournalsPage />} />
+          <Route path="/statistics" element={<StatisticsPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AppShell.Main>
     </AppShell>
   );
 }
 
 function App() {
   return (
-    <MantineProvider theme={theme}>
+    <MantineProvider theme={theme} defaultColorScheme="dark">
       <BrowserRouter>
         <AuthProvider>
           <SupabaseProvider>

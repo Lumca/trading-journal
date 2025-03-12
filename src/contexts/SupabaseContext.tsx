@@ -47,11 +47,14 @@ export interface TradeStats {
   losing_trades: number;
   win_rate: number;
   total_profit_loss: number;
+  total_fees: number; // Added to include fees in statistics
   average_profit_loss: number;
   largest_win: number;
   largest_loss: number;
   open_trades: number;
+  planned_trades: number;
 }
+
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
 
@@ -160,22 +163,30 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       // Calculate statistics from raw trade data
       const closedTrades = data.filter(trade => trade.status === 'closed');
       const openTrades = data.filter(trade => trade.status === 'open');
+      const plannedTrades = data.filter(trade => trade.status === 'planned');
       
-      const winningTrades = closedTrades.filter(trade => 
-        trade.profit_loss !== null && trade.profit_loss > 0
-      );
+      // Calculate profit/loss including fees
+      const tradesWithNetPL = closedTrades.map(trade => {
+        // Ensure fees are accounted for
+        const grossPL = trade.profit_loss || 0;
+        const fees = trade.fees || 0;
+        const netPL = grossPL - fees;
+        
+        return {
+          ...trade,
+          net_profit_loss: netPL
+        };
+      });
       
-      const losingTrades = closedTrades.filter(trade => 
-        trade.profit_loss !== null && trade.profit_loss < 0
-      );
-      
-      const breakEvenTrades = closedTrades.filter(trade => 
-        trade.profit_loss !== null && trade.profit_loss === 0
-      );
+      const winningTrades = tradesWithNetPL.filter(trade => trade.net_profit_loss > 0);
+      const losingTrades = tradesWithNetPL.filter(trade => trade.net_profit_loss < 0);
+      const breakEvenTrades = tradesWithNetPL.filter(trade => trade.net_profit_loss === 0);
 
-      const totalProfitLoss = closedTrades.reduce((sum, trade) => 
-        sum + (trade.profit_loss || 0), 0
-      );
+      // Sum up net profit/loss (after fees)
+      const totalProfitLoss = tradesWithNetPL.reduce((sum, trade) => sum + trade.net_profit_loss, 0);
+      
+      // Sum up total fees
+      const totalFees = closedTrades.reduce((sum, trade) => sum + (trade.fees || 0), 0);
       
       const stats: TradeStats = {
         total_trades: closedTrades.length + openTrades.length,
@@ -185,16 +196,18 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           ? (winningTrades.length / closedTrades.length) * 100 
           : 0,
         total_profit_loss: totalProfitLoss,
+        total_fees: totalFees,
         average_profit_loss: closedTrades.length > 0 
           ? totalProfitLoss / closedTrades.length 
           : 0,
         largest_win: winningTrades.length > 0 
-          ? Math.max(...winningTrades.map(trade => trade.profit_loss || 0)) 
+          ? Math.max(...winningTrades.map(trade => trade.net_profit_loss)) 
           : 0,
         largest_loss: losingTrades.length > 0 
-          ? Math.min(...losingTrades.map(trade => trade.profit_loss || 0)) 
+          ? Math.min(...losingTrades.map(trade => trade.net_profit_loss)) 
           : 0,
-        open_trades: openTrades.length
+        open_trades: openTrades.length,
+        planned_trades: plannedTrades.length
       };
 
       return stats;
@@ -226,6 +239,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       let profitLossPercent: number | undefined;
 
       if (trade.status === 'closed' && trade.exit_price) {
+        // First calculate the gross profit/loss without fees
         if (trade.direction === 'long') {
           profitLoss = (trade.exit_price - trade.entry_price) * trade.quantity;
           profitLossPercent = ((trade.exit_price - trade.entry_price) / trade.entry_price) * 100;
@@ -233,6 +247,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           profitLoss = (trade.entry_price - trade.exit_price) * trade.quantity;
           profitLossPercent = ((trade.entry_price - trade.exit_price) / trade.entry_price) * 100;
         }
+        
+        // We don't subtract fees from the stored profit_loss value
+        // This way we maintain gross P/L in the database and can calculate net P/L when needed
+        // This gives us more flexibility in reporting
       }
 
       // Insert the main trade record
@@ -339,6 +357,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           const direction = mainTradeData.direction || currentTrade.direction;
           const status = mainTradeData.status || currentTrade.status;
   
+          // Calculate gross P/L (without deducting fees)
           if (status === 'closed' && exitPrice) {
             if (direction === 'long') {
               mainTradeData.profit_loss = (exitPrice - entryPrice) * quantity;
@@ -844,219 +863,219 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   };
 
   // Function to get trade screenshots
-  const getTradeScreenshots = async (tradeId: number): Promise<any[]> => {
-    if (!user) return [];
-    
-    try {
-      const { data, error } = await supabase
-        .from('trade_screenshots')
-        .select('*')
-        .eq('trade_id', tradeId)
-        .order('created_at', { ascending: true });
-        
-      if (error) {
-        console.error('Error fetching trade screenshots:', error);
-        return [];
-      }
+const getTradeScreenshots = async (tradeId: number): Promise<any[]> => {
+  if (!user) return [];
+  
+  try {
+    const { data, error } = await supabase
+      .from('trade_screenshots')
+      .select('*')
+      .eq('trade_id', tradeId)
+      .order('created_at', { ascending: true });
       
-      // Add public URLs to the screenshot records
-      return data.map(screenshot => {
-        const { data: urlData } = supabase.storage
-          .from('screenshots')
-          .getPublicUrl(screenshot.file_path);
-          
-        return {
-          ...screenshot,
-          url: urlData.publicUrl
-        };
-      });
-    } catch (error) {
-      console.error('Exception fetching screenshots:', error);
+    if (error) {
+      console.error('Error fetching trade screenshots:', error);
       return [];
     }
-  };
+    
+    // Add public URLs to the screenshot records
+    return data.map(screenshot => {
+      const { data: urlData } = supabase.storage
+        .from('screenshots')
+        .getPublicUrl(screenshot.file_path);
+        
+      return {
+        ...screenshot,
+        url: urlData.publicUrl
+      };
+    });
+  } catch (error) {
+    console.error('Exception fetching screenshots:', error);
+    return [];
+  }
+};
 
-  // Get entry points for a trade
-  const getTradeEntries = async (tradeId: number): Promise<TradeEntry[]> => {
-    if (!user) return [];
+// Get entry points for a trade
+const getTradeEntries = async (tradeId: number): Promise<TradeEntry[]> => {
+  if (!user) return [];
 
-    const { data, error } = await supabase
-      .from('trade_entries')
-      .select('*')
-      .eq('trade_id', tradeId)
-      .order('date', { ascending: true });
+  const { data, error } = await supabase
+    .from('trade_entries')
+    .select('*')
+    .eq('trade_id', tradeId)
+    .order('date', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching trade entries:', error);
-      return [];
-    }
+  if (error) {
+    console.error('Error fetching trade entries:', error);
+    return [];
+  }
 
-    return data as TradeEntry[];
-  };
+  return data as TradeEntry[];
+};
 
-  // Add a new entry point
-  const addTradeEntry = async (tradeId: number, entry: TradeEntryInput): Promise<TradeEntry | null> => {
-    if (!user) return null;
+// Add a new entry point
+const addTradeEntry = async (tradeId: number, entry: TradeEntryInput): Promise<TradeEntry | null> => {
+  if (!user) return null;
 
-    const { data, error } = await supabase
-      .from('trade_entries')
-      .insert([{ ...entry, trade_id: tradeId }])
-      .select()
-      .single();
+  const { data, error } = await supabase
+    .from('trade_entries')
+    .insert([{ ...entry, trade_id: tradeId }])
+    .select()
+    .single();
 
-    if (error) {
-      console.error('Error adding trade entry:', error);
-      return null;
-    }
+  if (error) {
+    console.error('Error adding trade entry:', error);
+    return null;
+  }
 
-    return data as TradeEntry;
-  };
+  return data as TradeEntry;
+};
 
-  // Update an entry point
-  const updateTradeEntry = async (id: number, entry: Partial<TradeEntryInput>): Promise<TradeEntry | null> => {
-    if (!user) return null;
+// Update an entry point
+const updateTradeEntry = async (id: number, entry: Partial<TradeEntryInput>): Promise<TradeEntry | null> => {
+  if (!user) return null;
 
-    const { data, error } = await supabase
-      .from('trade_entries')
-      .update(entry)
-      .eq('id', id)
-      .select()
-      .single();
+  const { data, error } = await supabase
+    .from('trade_entries')
+    .update(entry)
+    .eq('id', id)
+    .select()
+    .single();
 
-    if (error) {
-      console.error('Error updating trade entry:', error);
-      return null;
-    }
+  if (error) {
+    console.error('Error updating trade entry:', error);
+    return null;
+  }
 
-    return data as TradeEntry;
-  };
+  return data as TradeEntry;
+};
 
-  // Delete an entry point
-  const deleteTradeEntry = async (id: number): Promise<void> => {
-    if (!user) return;
+// Delete an entry point
+const deleteTradeEntry = async (id: number): Promise<void> => {
+  if (!user) return;
 
-    const { error } = await supabase
-      .from('trade_entries')
-      .delete()
-      .eq('id', id);
+  const { error } = await supabase
+    .from('trade_entries')
+    .delete()
+    .eq('id', id);
 
-    if (error) {
-      console.error('Error deleting trade entry:', error);
-    }
-  };
+  if (error) {
+    console.error('Error deleting trade entry:', error);
+  }
+};
 
-  // Get exit points for a trade
-  const getTradeExits = async (tradeId: number): Promise<TradeExit[]> => {
-    if (!user) return [];
+// Get exit points for a trade
+const getTradeExits = async (tradeId: number): Promise<TradeExit[]> => {
+  if (!user) return [];
 
-    const { data, error } = await supabase
-      .from('trade_exits')
-      .select('*')
-      .eq('trade_id', tradeId)
-      .order('date', { ascending: true });
+  const { data, error } = await supabase
+    .from('trade_exits')
+    .select('*')
+    .eq('trade_id', tradeId)
+    .order('date', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching trade exits:', error);
-      return [];
-    }
+  if (error) {
+    console.error('Error fetching trade exits:', error);
+    return [];
+  }
 
-    return data as TradeExit[];
-  };
+  return data as TradeExit[];
+};
 
-  // Add a new exit point
-  const addTradeExit = async (tradeId: number, exit: TradeExitInput): Promise<TradeExit | null> => {
-    if (!user) return null;
+// Add a new exit point
+const addTradeExit = async (tradeId: number, exit: TradeExitInput): Promise<TradeExit | null> => {
+  if (!user) return null;
 
-    const { data, error } = await supabase
-      .from('trade_exits')
-      .insert([{ ...exit, trade_id: tradeId }])
-      .select()
-      .single();
+  const { data, error } = await supabase
+    .from('trade_exits')
+    .insert([{ ...exit, trade_id: tradeId }])
+    .select()
+    .single();
 
-    if (error) {
-      console.error('Error adding trade exit:', error);
-      return null;
-    }
+  if (error) {
+    console.error('Error adding trade exit:', error);
+    return null;
+  }
 
-    return data as TradeExit;
-  };
+  return data as TradeExit;
+};
 
-  // Update an exit point
-  const updateTradeExit = async (id: number, exit: Partial<TradeExitInput>): Promise<TradeExit | null> => {
-    if (!user) return null;
+// Update an exit point
+const updateTradeExit = async (id: number, exit: Partial<TradeExitInput>): Promise<TradeExit | null> => {
+  if (!user) return null;
 
-    const { data, error } = await supabase
-      .from('trade_exits')
-      .update(exit)
-      .eq('id', id)
-      .select()
-      .single();
+  const { data, error } = await supabase
+    .from('trade_exits')
+    .update(exit)
+    .eq('id', id)
+    .select()
+    .single();
 
-    if (error) {
-      console.error('Error updating trade exit:', error);
-      return null;
-    }
+  if (error) {
+    console.error('Error updating trade exit:', error);
+    return null;
+  }
 
-    return data as TradeExit;
-  };
+  return data as TradeExit;
+};
 
-  // Delete an exit point
-  const deleteTradeExit = async (id: number): Promise<void> => {
-    if (!user) return;
+// Delete an exit point
+const deleteTradeExit = async (id: number): Promise<void> => {
+  if (!user) return;
 
-    const { error } = await supabase
-      .from('trade_exits')
-      .delete()
-      .eq('id', id);
+  const { error } = await supabase
+    .from('trade_exits')
+    .delete()
+    .eq('id', id);
 
-    if (error) {
-      console.error('Error deleting trade exit:', error);
-    }
-  };
+  if (error) {
+    console.error('Error deleting trade exit:', error);
+  }
+};
 
-  const value = {
-    getTrades,
-    getTrade,
-    addTrade,
-    updateTrade,
-    deleteTrade,
-    getTradeStats,
-    getJournals,
-    getJournal,
-    addJournal,
-    updateJournal,
-    deleteJournal,
-    getJournalStats,
-    getUserSettings,
-    updateUserSettings,
-    getTradeIndicators,
-    addTradeIndicator,
-    deleteTradeIndicator,
-    uploadTradeScreenshot,
-    deleteTradeScreenshot,
-    getTradeScreenshots,
-    getTradeEntries,
-    addTradeEntry,
-    updateTradeEntry,
-    deleteTradeEntry,
-    getTradeExits,
-    addTradeExit,
-    updateTradeExit,
-    deleteTradeExit,
-  };
+const value = {
+  getTrades,
+  getTrade,
+  addTrade,
+  updateTrade,
+  deleteTrade,
+  getTradeStats,
+  getJournals,
+  getJournal,
+  addJournal,
+  updateJournal,
+  deleteJournal,
+  getJournalStats,
+  getUserSettings,
+  updateUserSettings,
+  getTradeIndicators,
+  addTradeIndicator,
+  deleteTradeIndicator,
+  uploadTradeScreenshot,
+  deleteTradeScreenshot,
+  getTradeScreenshots,
+  getTradeEntries,
+  addTradeEntry,
+  updateTradeEntry,
+  deleteTradeEntry,
+  getTradeExits,
+  addTradeExit,
+  updateTradeExit,
+  deleteTradeExit,
+};
 
-  return (
-    <SupabaseContext.Provider value={value}>
-      {children}
-    </SupabaseContext.Provider>
-  );
+return (
+  <SupabaseContext.Provider value={value}>
+    {children}
+  </SupabaseContext.Provider>
+);
 }
 
 // Custom hook to use the Supabase context
 export function useSupabase() {
-  const context = useContext(SupabaseContext);
-  if (context === undefined) {
-    throw new Error('useSupabase must be used within a SupabaseProvider');
-  }
-  return context;
+const context = useContext(SupabaseContext);
+if (context === undefined) {
+  throw new Error('useSupabase must be used within a SupabaseProvider');
+}
+return context;
 }

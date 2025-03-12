@@ -156,13 +156,13 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
               color={trade.direction === 'long' ? 'green' : 'red'} 
               size="lg"
             >
-              {trade.direction.toUpperCase()}
+              {(trade.direction || '').toUpperCase()}
             </Badge>
             <Badge 
-              color={trade.status === 'open' ? 'blue' : 'green'} 
+              color={trade.status === 'open' ? 'blue' : 'green'}
               size="lg"
             >
-              {trade.status.toUpperCase()}
+              {(trade.status || '').toUpperCase()}
             </Badge>
           </Group>
           
@@ -224,27 +224,44 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
                   </Stack>
                 </Grid.Col>
                 
-                {trade.status === 'closed' && (
-                  <>
-                    <Grid.Col span={6}>
-                      <Stack gap="xs">
-                        <Text fw={500}>P/L</Text>
-                        <Text fw={700} c={trade.profit_loss && trade.profit_loss >= 0 ? 'green' : 'red'}>
-                          {formatCurrency(trade.profit_loss)}
-                        </Text>
-                      </Stack>
-                    </Grid.Col>
-                    
-                    <Grid.Col span={6}>
-                      <Stack gap="xs">
-                        <Text fw={500}>P/L %</Text>
-                        <Text fw={700} c={trade.profit_loss_percent && trade.profit_loss_percent >= 0 ? 'green' : 'red'}>
-                          {trade.profit_loss_percent?.toFixed(2)}%
-                        </Text>
-                      </Stack>
-                    </Grid.Col>
-                  </>
-                )}
+                
+<Grid.Col span={6}>
+  <Stack gap="xs">
+    <Text fw={500}>Fees</Text>
+    <Text c="red">{formatCurrency(trade.fees || 0)}</Text>
+  </Stack>
+</Grid.Col>
+
+{trade.status === 'closed' && (
+  <>
+    <Grid.Col span={6}>
+      <Stack gap="xs">
+        <Text fw={500}>Gross P/L</Text>
+        <Text fw={700} c={trade.profit_loss && trade.profit_loss >= 0 ? 'green' : 'red'}>
+          {formatCurrency(trade.profit_loss || 0)}
+        </Text>
+      </Stack>
+    </Grid.Col>
+    
+    <Grid.Col span={6}>
+      <Stack gap="xs">
+        <Text fw={500}>Net P/L (after fees)</Text>
+        <Text fw={700} c={trade.profit_loss && (trade.profit_loss - (trade.fees || 0)) >= 0 ? 'green' : 'red'}>
+          {formatCurrency((trade.profit_loss || 0) - (trade.fees || 0))}
+        </Text>
+      </Stack>
+    </Grid.Col>
+    
+    <Grid.Col span={6}>
+      <Stack gap="xs">
+        <Text fw={500}>P/L %</Text>
+        <Text fw={700} c={trade.profit_loss_percent && trade.profit_loss_percent >= 0 ? 'green' : 'red'}>
+          {trade.profit_loss_percent?.toFixed(2)}%
+        </Text>
+      </Stack>
+    </Grid.Col>
+  </>
+)}
               </Grid>
             </Box>
           </Stack>
@@ -312,7 +329,7 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
                               exit.execution_status === 'pending' ? 'blue' : 'gray'
                             }
                           >
-                            {exit.execution_status.toUpperCase()}
+                            {(exit.execution_status || "").toUpperCase()}
                           </Badge>
                         </Group>
                         <Text>{exit.date ? formatDate(exit.date) : 'No date'}</Text>

@@ -13,6 +13,8 @@ interface TradeDrawerButtonProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   compact?: boolean;
   iconOnly?: boolean;
+  // Add this new prop
+  customOpenHandler?: () => void;
 }
 
 export function TradeDrawerButton({ 
@@ -22,29 +24,43 @@ export function TradeDrawerButton({
   journalId,
   size = 'md',
   compact = false,
-  iconOnly = false
+  iconOnly = false,
+  customOpenHandler
 }: TradeDrawerButtonProps) {
   const [drawerOpened, setDrawerOpened] = useState(false);
 
-  const handleOpen = () => setDrawerOpened(true);
+  const handleOpen = () => {
+    // If customOpenHandler is provided, use it
+    if (customOpenHandler) {
+      customOpenHandler();
+      // Set a short timeout to open the drawer after the popover closes
+      setTimeout(() => {
+        setDrawerOpened(true);
+      }, 50);
+    } else {
+      // Default behavior
+      setDrawerOpened(true);
+    }
+  };
+  
   const handleClose = () => setDrawerOpened(false);
   const handleSuccess = () => {
     onSuccess();
     setDrawerOpened(false);
   };
 
-  if (mode === 'add') {
+  if (mode === 'edit') {
     if (iconOnly) {
       return (
         <>
-          <Tooltip label="Add Trade">
-            <ActionIcon 
-              color="blue" 
-              variant="filled" 
+          <Tooltip label="Edit Trade">
+            <ActionIcon
+              color="blue"
+              variant="subtle"
               onClick={handleOpen}
               size={size}
             >
-              <IconPlus size={16} />
+              <IconEdit size={16} />
             </ActionIcon>
           </Tooltip>
           
@@ -52,6 +68,7 @@ export function TradeDrawerButton({
             opened={drawerOpened}
             onClose={handleClose}
             onSuccess={handleSuccess}
+            editTradeId={trade?.id}
             journalId={journalId}
           />
         </>
@@ -61,12 +78,38 @@ export function TradeDrawerButton({
     return (
       <>
         <Button
-          leftSection={<IconPlus size={16} />}
+          leftSection={<IconEdit size={16} />}
           onClick={handleOpen}
           size={size}
         >
-          {compact ? '' : 'Add Trade'}
+          Edit Trade
         </Button>
+        
+        <TradeDrawerForm
+          opened={drawerOpened}
+          onClose={handleClose}
+          onSuccess={handleSuccess}
+          editTradeId={trade?.id}
+          journalId={journalId}
+        />
+      </>
+    );
+  }
+  
+  // Add mode
+  if (iconOnly) {
+    return (
+      <>
+        <Tooltip label="Add Trade">
+          <ActionIcon 
+            color="blue" 
+            variant="filled" 
+            onClick={handleOpen}
+            size={size}
+          >
+            <IconPlus size={16} />
+          </ActionIcon>
+        </Tooltip>
         
         <TradeDrawerForm
           opened={drawerOpened}
@@ -76,27 +119,22 @@ export function TradeDrawerButton({
         />
       </>
     );
-  } 
+  }
   
-  // Edit mode
   return (
     <>
-      <Tooltip label="Edit Trade">
-        <ActionIcon
-          color="blue"
-          variant="subtle"
-          onClick={handleOpen}
-          size={size}
-        >
-          <IconEdit size={16} />
-        </ActionIcon>
-      </Tooltip>
+      <Button
+        leftSection={<IconPlus size={16} />}
+        onClick={handleOpen}
+        size={size}
+      >
+        {compact ? '' : 'Add Trade'}
+      </Button>
       
       <TradeDrawerForm
         opened={drawerOpened}
         onClose={handleClose}
         onSuccess={handleSuccess}
-        editTradeId={trade?.id}
         journalId={journalId}
       />
     </>

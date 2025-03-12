@@ -192,7 +192,7 @@ export function TradeScreenshots({ tradeId, screenshots, onScreenshotsChange }: 
         const newScreenshot: Screenshot = {
           url: objectUrl,
           file: fileToUpload,
-          tradeId: tradeId,
+          tradeId: tradeId || 0, // Use 0 as a placeholder for new trades
           fileName: file.name,
         };
         
@@ -202,25 +202,27 @@ export function TradeScreenshots({ tradeId, screenshots, onScreenshotsChange }: 
       // Update the screenshots
       onScreenshotsChange([...screenshots, ...newScreenshots]);
       
-      // Upload the files to storage
-      for (const screenshot of newScreenshots) {
-        if (screenshot.file) {
-          const result = await uploadTradeScreenshot(tradeId, screenshot.file);
-          if (result) {
-            // Replace the temp URL with the storage URL
-            const index = screenshots.length + newScreenshots.indexOf(screenshot);
-            const updatedScreenshots = [...screenshots, ...newScreenshots];
-            updatedScreenshots[index] = {
-              ...screenshot,
-              id: result.id,
-              url: result.url,
-            };
-            onScreenshotsChange(updatedScreenshots);
+      // If we have a valid tradeId (editing an existing trade), upload the files to storage
+      if (tradeId > 0) {
+        for (const screenshot of newScreenshots) {
+          if (screenshot.file) {
+            const result = await uploadTradeScreenshot(tradeId, screenshot.file);
+            if (result) {
+              // Replace the temp URL with the storage URL
+              const index = screenshots.length + newScreenshots.indexOf(screenshot);
+              const updatedScreenshots = [...screenshots, ...newScreenshots];
+              updatedScreenshots[index] = {
+                ...screenshot,
+                id: result.id,
+                url: result.url,
+              };
+              onScreenshotsChange(updatedScreenshots);
+            }
           }
         }
       }
     } catch (error) {
-      console.error('Error uploading screenshots:', error);
+      console.error('Error handling screenshots:', error);
     } finally {
       setUploading(false);
       setFilesToUpload([]);
@@ -351,60 +353,60 @@ export function TradeScreenshots({ tradeId, screenshots, onScreenshotsChange }: 
       
       {/* Resize Options Modal */}
       <Modal
-  opened={showResizeModal}
-  onClose={() => setShowResizeModal(false)}
-  title="Resize Options"
-  size="md"
-  centered
->
-  <Stack pb={5}>
-    <Select
-      label="Quality Preset"
-      placeholder="Select a preset"
-      data={presetOptions}
-      defaultValue="medium"
-      onChange={(value) => value && applyPreset(value)}
-    />
-    
-    <NumberInput
-      label="Maximum Width (pixels)"
-      value={resizeOptions.maxWidth}
-      onChange={(value) => setResizeOptions({...resizeOptions, maxWidth: Number(value) || 1200})}
-      min={100}
-      max={3000}
-      step={100}
-    />
-    
-    <Text size="sm" fw={500}>Image Quality</Text>
-    <Slider
-      value={resizeOptions.quality * 100}
-      onChange={(value) => setResizeOptions({...resizeOptions, quality: value / 100})}
-      min={10}
-      max={100}
-      step={5}
-      label={(value) => `${value}%`}
-      marks={[
-        { value: 10, label: '10%' },
-        { value: 50, label: '50%' },
-        { value: 100, label: '100%' }
-      ]}
-    />
-    
-    <Text size="xs" c="dimmed">
-      Higher quality and resolution will result in larger file sizes. 
-      Medium quality (80%) with 1200px width is recommended for most screenshots.
-    </Text>
-    
-    <Group position="right" mt="md">
-      <Button variant="outline" onClick={() => setShowResizeModal(false)}>
-        Cancel
-      </Button>
-      <Button onClick={handleUpload}>
-        {`Apply & Upload (${filesToUpload.length} ${filesToUpload.length === 1 ? 'file' : 'files'})`}
-      </Button>
-    </Group>
-  </Stack>
-</Modal>
+        opened={showResizeModal}
+        onClose={() => setShowResizeModal(false)}
+        title="Resize Options"
+        size="md"
+        centered
+      >
+        <Stack pb={5}>
+          <Select
+            label="Quality Preset"
+            placeholder="Select a preset"
+            data={presetOptions}
+            defaultValue="medium"
+            onChange={(value) => value && applyPreset(value)}
+          />
+          
+          <NumberInput
+            label="Maximum Width (pixels)"
+            value={resizeOptions.maxWidth}
+            onChange={(value) => setResizeOptions({...resizeOptions, maxWidth: Number(value) || 1200})}
+            min={100}
+            max={3000}
+            step={100}
+          />
+          
+          <Text size="sm" fw={500}>Image Quality</Text>
+          <Slider
+            value={resizeOptions.quality * 100}
+            onChange={(value) => setResizeOptions({...resizeOptions, quality: value / 100})}
+            min={10}
+            max={100}
+            step={5}
+            label={(value) => `${value}%`}
+            marks={[
+              { value: 10, label: '10%' },
+              { value: 50, label: '50%' },
+              { value: 100, label: '100%' }
+            ]}
+          />
+          
+          <Text size="xs" c="dimmed">
+            Higher quality and resolution will result in larger file sizes. 
+            Medium quality (80%) with 1200px width is recommended for most screenshots.
+          </Text>
+          
+          <Group position="right" mt="md">
+            <Button variant="outline" onClick={() => setShowResizeModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpload}>
+              {`Apply & Upload (${filesToUpload.length} ${filesToUpload.length === 1 ? 'file' : 'files'})`}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </>
   );
 }

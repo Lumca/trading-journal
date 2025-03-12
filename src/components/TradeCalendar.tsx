@@ -12,6 +12,7 @@ import {
   Loader,
   Popover,
   Select,
+  Stack,
   Text,
   Title,
   Tooltip
@@ -19,6 +20,7 @@ import {
 import {
   IconChevronLeft,
   IconChevronRight,
+  IconEdit,
   IconRefresh
 } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
@@ -26,9 +28,19 @@ import { useJournal } from '../contexts/JournalContext';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { Trade } from '../lib/supabase';
 import { TradeDrawerButton } from './TradeDrawerButton';
+import { TradeDrawerForm } from './TradeDrawerForm';
 
 interface CalendarProps {
   journalId?: number | null;
+}
+
+interface ProfitSummary {
+  winCount: number;     // Number of winning trades
+  lossCount: number;    // Number of losing trades
+  winAmount: number;    // Total profit from winning trades
+  lossAmount: number;   // Total loss from losing trades
+  netProfit: number;    // Net profit from all trades
+  plannedCount: number; // Number of planned trades
 }
 
 export function TradeCalendar({ journalId }: CalendarProps) {
@@ -38,6 +50,10 @@ export function TradeCalendar({ journalId }: CalendarProps) {
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const { getTrades, getTradeEntries, getTradeExits } = useSupabase();
   const { selectedJournal } = useJournal();
+  
+  // States to manage the trade drawer independently
+  const [editTradeId, setEditTradeId] = useState<number | null>(null);
+  const [drawerOpened, setDrawerOpened] = useState(false);
   
   // Fetch trades whenever journalId changes
   useEffect(() => {
@@ -72,6 +88,28 @@ export function TradeCalendar({ journalId }: CalendarProps) {
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handleTradeEdit = (trade: Trade) => {
+    // Close any open popover by clicking the body
+    document.body.click();
+    
+    // Small delay to ensure popover is closed
+    setTimeout(() => {
+      setEditTradeId(trade.id);
+      setDrawerOpened(true);
+    }, 50);
+  };
+  
+  const handleDrawerClose = () => {
+    setDrawerOpened(false);
+    setEditTradeId(null);
+  };
+  
+  const handleDrawerSuccess = () => {
+    fetchTrades();
+    setDrawerOpened(false);
+    setEditTradeId(null);
   };
   
   // Calculate month/year display
@@ -213,82 +251,93 @@ export function TradeCalendar({ journalId }: CalendarProps) {
     return allTrades;
   };
 
-  // Calculate net P/L for a specific date
-  const getNetProfitLossForDate = (date: Date) => {
-    const closedTrades = getTradeExitsForDate(date);
+  // Calculate detailed profit metrics for a specific date
+  const getProfitSummaryForDate = (date: Date): ProfitSummary => {
+    // Initialize summary values
+    const summary: ProfitSummary = {
+      winCount: 0,
+      lossCount: 0,
+      winAmount: 0,
+      lossAmount: 0,
+      netProfit: 0,
+      plannedCount: 0
+    };
     
-    if (closedTrades.length === 0) return 0;
+    // Get entry trades for this date and count planned ones
+    const entryTrades = getTradeEntriesForDate(date);
+    summary.plannedCount = entryTrades.filter(t => t.status === 'planned').length;
     
-    // For each trade, calculate the profit/loss for exits on this date
-    return closedTrades.reduce((total, trade) => {
-      // First check if the main exit date matches and use its P/L
-      if (trade.exit_date) {
-        const exitDate = new Date(trade.exit_date);
-        if (
-          exitDate.getFullYear() === date.getFullYear() &&
-          exitDate.getMonth() === date.getMonth() &&
-          exitDate.getDate() === date.getDate() &&
-          trade.profit_loss !== undefined
-        ) {
-          return total + trade.profit_loss;
+    // Get closed trades exited on this date
+    const closedTrades = getTradeExitsForDate(date).filter(t => t.status === 'closed');
+    
+    // Calculate profit metrics from closed trades
+    closedTrades.forEach(trade => {
+      if (trade.profit_loss !== undefined) {
+        if (trade.profit_loss > 0) {
+          summary.winCount++;
+          summary.winAmount += trade.profit_loss;
+        } else if (trade.profit_loss < 0) {
+          summary.lossCount++;
+          summary.lossAmount += Math.abs(trade.profit_loss);
         }
       }
-      
-      // Next check additional exit points for this date
-      if (trade.exits) {
-        const exitsOnDate = trade.exits.filter(exit => {
-          if (!exit.date || exit.execution_status !== 'executed') return false;
-          
-          const exitDate = new Date(exit.date);
-          return (
-            exitDate.getFullYear() === date.getFullYear() &&
-            exitDate.getMonth() === date.getMonth() &&
-            exitDate.getDate() === date.getDate()
-          );
-        });
-        
-        // Calculate P/L for these exits
-        return total + exitsOnDate.reduce((exitTotal, exit) => {
-          // Simple P/L calculation based on direction
-          if (!exit.price || !exit.quantity) return exitTotal;
-          
-          if (trade.direction === 'long') {
-            const entryValue = trade.entry_price * exit.quantity;
-            const exitValue = exit.price * exit.quantity;
-            return exitTotal + (exitValue - entryValue);
-          } else {
-            const entryValue = trade.entry_price * exit.quantity;
-            const exitValue = exit.price * exit.quantity;
-            return exitTotal + (entryValue - exitValue);
-          }
-        }, 0);
-      }
-      
-      return total;
-    }, 0);
+    });
+    
+    // Calculate net profit
+    summary.netProfit = summary.winAmount - summary.lossAmount;
+    
+    return summary;
+  };
+
+  // Calculate detailed profit metrics for a week
+  const getProfitSummaryForWeek = (week: Date[]): ProfitSummary => {
+    // Initialize summary values
+    const summary: ProfitSummary = {
+      winCount: 0,
+      lossCount: 0,
+      winAmount: 0,
+      lossAmount: 0,
+      netProfit: 0,
+      plannedCount: 0
+    };
+    
+    // Combine metrics for each day in the week
+    week.forEach(date => {
+      const dailyProfit = getProfitSummaryForDate(date);
+      summary.winCount += dailyProfit.winCount;
+      summary.lossCount += dailyProfit.lossCount;
+      summary.winAmount += dailyProfit.winAmount;
+      summary.lossAmount += dailyProfit.lossAmount;
+      summary.plannedCount += dailyProfit.plannedCount;
+    });
+    
+    // Calculate net profit
+    summary.netProfit = summary.winAmount - summary.lossAmount;
+    
+    return summary;
   };
 
   // Calculate weekly summary
   const getWeeklySummary = (week: Date[]) => {
     let totalEntries = 0;
     let totalExits = 0;
-    let netProfitLoss = 0;
     
     // Process each day in the week
     week.forEach(date => {
       const entriesForDay = getTradeEntriesForDate(date);
       const exitsForDay = getTradeExitsForDate(date);
-      const plForDay = getNetProfitLossForDate(date);
       
       totalEntries += entriesForDay.length;
       totalExits += exitsForDay.length;
-      netProfitLoss += plForDay;
     });
+    
+    // Get detailed profit metrics
+    const profitSummary = getProfitSummaryForWeek(week);
     
     return {
       totalEntries,
       totalExits,
-      netProfitLoss
+      profitSummary
     };
   };
 
@@ -296,12 +345,18 @@ export function TradeCalendar({ journalId }: CalendarProps) {
   const renderDayCell = (date: Date, isCurrentMonth: boolean = true) => {
     const dayEntries = getTradeEntriesForDate(date);
     const dayExits = getTradeExitsForDate(date);
-    const netProfitLoss = getNetProfitLossForDate(date);
     const isToday = new Date().toDateString() === date.toDateString();
+    
+    // Get detailed profit metrics
+    const profitSummary = getProfitSummaryForDate(date);
     
     // Count trades by direction
     const longEntries = dayEntries.filter(t => t.direction === 'long').length;
     const shortEntries = dayEntries.filter(t => t.direction === 'short').length;
+    
+    // Count planned trades separately
+    const plannedEntries = dayEntries.filter(t => t.status === 'planned').length;
+    const executedEntries = dayEntries.length - plannedEntries;
     
     // Check if this date has any activity to show
     const hasActivity = dayEntries.length > 0 || dayExits.length > 0;
@@ -337,29 +392,47 @@ export function TradeCalendar({ journalId }: CalendarProps) {
               <Box mt={4} style={{ cursor: 'pointer' }}>
                 {dayEntries.length > 0 && (
                   <Group gap={4}>
-                    {longEntries > 0 && (
-                      <Badge color="green" size="xs">
-                        {longEntries} Long
-                      </Badge>
+                    {/* Show executed entries */}
+                    {executedEntries > 0 && (
+                      <>
+                        {longEntries > 0 && (
+                          <Badge color="green" size="xs">
+                            {longEntries} Long
+                          </Badge>
+                        )}
+                        
+                        {shortEntries > 0 && (
+                          <Badge color="red" size="xs">
+                            {shortEntries} Short
+                          </Badge>
+                        )}
+                      </>
                     )}
                     
-                    {shortEntries > 0 && (
-                      <Badge color="red" size="xs">
-                        {shortEntries} Short
+                    {/* Show planned entries separately */}
+                    {plannedEntries > 0 && (
+                      <Badge color="yellow" size="xs" variant="outline">
+                        {plannedEntries} Planned
                       </Badge>
                     )}
                   </Group>
                 )}
                 
-                {dayExits.length > 0 && (
-                  <Text 
-                    size="xs" 
-                    fw={500} 
-                    c={netProfitLoss >= 0 ? 'green' : 'red'}
-                    mt={4}
-                  >
-                    {formatCurrency(netProfitLoss)}
-                  </Text>
+                {/* Show profit information */}
+                {(profitSummary.winAmount > 0 || profitSummary.lossAmount > 0) && (
+                  <Group gap={4} mt={4}>
+                    {profitSummary.winAmount > 0 && (
+                      <Text size="xs" fw={500} c="green">
+                        +{formatCurrency(profitSummary.winAmount)}
+                      </Text>
+                    )}
+                    
+                    {profitSummary.lossAmount > 0 && (
+                      <Text size="xs" fw={500} c="red">
+                        -{formatCurrency(profitSummary.lossAmount)}
+                      </Text>
+                    )}
+                  </Group>
                 )}
               </Box>
             </Popover.Target>
@@ -391,17 +464,27 @@ export function TradeCalendar({ journalId }: CalendarProps) {
                             color={trade.direction === 'long' ? 'green' : 'red'}
                             size="xs"
                           >
-                            {trade.direction.toUpperCase()}
+                            {(trade.direction || '').toUpperCase()}
                           </Badge>
+                          
+                          {/* Add badge for planned trades */}
+                          {trade.status === 'planned' && (
+                            <Badge color="yellow" size="xs">PLANNED</Badge>
+                          )}
                         </Group>
                         
-                        <TradeDrawerButton
-                          mode="edit"
-                          trade={trade}
-                          onSuccess={fetchTrades}
+                        {/* Edit button - no TradeDrawerButton, just a simple button */}
+                        <ActionIcon
+                          color="blue"
+                          variant="subtle"
                           size="xs"
-                          iconOnly
-                        />
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTradeEdit(trade);
+                          }}
+                        >
+                          <IconEdit size={16} />
+                        </ActionIcon>
                       </Group>
                       
                       <Text size="xs">
@@ -432,17 +515,22 @@ export function TradeCalendar({ journalId }: CalendarProps) {
                             color={trade.direction === 'long' ? 'green' : 'red'}
                             size="xs"
                           >
-                            {trade.direction.toUpperCase()}
+                            {(trade.direction || '').toUpperCase()}
                           </Badge>
                         </Group>
                         
-                        <TradeDrawerButton
-                          mode="edit"
-                          trade={trade}
-                          onSuccess={fetchTrades}
+                        {/* Edit button - no TradeDrawerButton, just a simple button */}
+                        <ActionIcon
+                          color="blue"
+                          variant="subtle"
                           size="xs"
-                          iconOnly
-                        />
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTradeEdit(trade);
+                          }}
+                        >
+                          <IconEdit size={16} />
+                        </ActionIcon>
                       </Group>
                       
                       <Text size="xs">
@@ -455,25 +543,51 @@ export function TradeCalendar({ journalId }: CalendarProps) {
                         c={trade.profit_loss && trade.profit_loss >= 0 ? 'green' : 'red'}
                       >
                         P/L: {formatCurrency(trade.profit_loss || 0)} 
-                        ({trade.profit_loss_percent?.toFixed(2)}%)
+                        {trade.profit_loss_percent !== undefined && 
+                          ` (${trade.profit_loss_percent.toFixed(2)}%)`}
                       </Text>
                     </Card>
                   ))}
                   
                   <Divider my="xs" />
                   
-                  <Group justify="apart">
-                    <Text size="sm" fw={500}>
-                      Net P/L:
-                    </Text>
-                    <Text 
-                      size="sm" 
-                      fw={700} 
-                      c={netProfitLoss >= 0 ? 'green' : 'red'}
-                    >
-                      {formatCurrency(netProfitLoss)}
-                    </Text>
-                  </Group>
+                  {/* Detailed profit breakdown */}
+                  <Stack spacing={4}>
+                    {profitSummary.winAmount > 0 && (
+                      <Group justify="apart">
+                        <Text size="sm" fw={500} c="green">
+                          Winning Trades ({profitSummary.winCount}):
+                        </Text>
+                        <Text size="sm" fw={700} c="green">
+                          +{formatCurrency(profitSummary.winAmount)}
+                        </Text>
+                      </Group>
+                    )}
+                    
+                    {profitSummary.lossAmount > 0 && (
+                      <Group justify="apart">
+                        <Text size="sm" fw={500} c="red">
+                          Losing Trades ({profitSummary.lossCount}):
+                        </Text>
+                        <Text size="sm" fw={700} c="red">
+                          -{formatCurrency(profitSummary.lossAmount)}
+                        </Text>
+                      </Group>
+                    )}
+                    
+                    <Group justify="apart">
+                      <Text size="sm" fw={700}>
+                        Net P/L:
+                      </Text>
+                      <Text 
+                        size="sm" 
+                        fw={700} 
+                        c={profitSummary.netProfit >= 0 ? 'green' : 'red'}
+                      >
+                        {formatCurrency(profitSummary.netProfit)}
+                      </Text>
+                    </Group>
+                  </Stack>
                 </>
               )}
             </Popover.Dropdown>
@@ -486,6 +600,7 @@ export function TradeCalendar({ journalId }: CalendarProps) {
   // Render weekly summary row
   const renderWeeklySummary = (week: Date[]) => {
     const summary = getWeeklySummary(week);
+    const profitSummary = summary.profitSummary;
     
     return (
       <Box
@@ -494,34 +609,54 @@ export function TradeCalendar({ journalId }: CalendarProps) {
           border: '1px solid #e9ecef',
           borderRadius: '4px',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          flexDirection: 'column',
           minHeight: '40px'
         }}
       >
-        <Text size="sm" fw={500}>
-          Week Summary
-        </Text>
-        <Group>
-          {summary.totalEntries > 0 && (
-            <Badge size="sm">
-              {summary.totalEntries} {summary.totalEntries === 1 ? 'Entry' : 'Entries'}
-            </Badge>
-          )}
-          {summary.totalExits > 0 && (
-            <Badge size="sm">
-              {summary.totalExits} {summary.totalExits === 1 ? 'Exit' : 'Exits'}
-            </Badge>
-          )}
-          {summary.netProfitLoss !== 0 && (
-            <Text 
-              size="sm" 
-              fw={700} 
-              c={summary.netProfitLoss >= 0 ? 'green' : 'red'}
-            >
-              {formatCurrency(summary.netProfitLoss)}
-            </Text>
-          )}
+        <Group justify="space-between" mb={4}>
+          <Text size="sm" fw={500}>
+            Week Summary
+          </Text>
+          <Group gap={8}>
+            {summary.totalEntries > 0 && (
+              <Badge size="sm">
+                {summary.totalEntries} {summary.totalEntries === 1 ? 'Entry' : 'Entries'}
+              </Badge>
+            )}
+            {profitSummary.plannedCount > 0 && (
+              <Badge size="sm" color="yellow" variant="outline">
+                {profitSummary.plannedCount} Planned
+              </Badge>
+            )}
+            {summary.totalExits > 0 && (
+              <Badge size="sm">
+                {summary.totalExits} {summary.totalExits === 1 ? 'Exit' : 'Exits'}
+              </Badge>
+            )}
+          </Group>
+        </Group>
+        
+        {/* Add detailed profit breakdown */}
+        <Group justify="space-between">
+          <Group>
+            {profitSummary.winAmount > 0 && (
+              <Text size="xs" fw={700} c="green">
+                +{formatCurrency(profitSummary.winAmount)}
+              </Text>
+            )}
+            
+            {profitSummary.lossAmount > 0 && (
+              <Text size="xs" fw={700} c="red">
+                -{formatCurrency(profitSummary.lossAmount)}
+              </Text>
+            )}
+            
+            {(profitSummary.winAmount > 0 || profitSummary.lossAmount > 0) && (
+              <Text size="xs" fw={700} c={profitSummary.netProfit >= 0 ? 'green' : 'red'}>
+                Net: {formatCurrency(profitSummary.netProfit)}
+              </Text>
+            )}
+          </Group>
         </Group>
       </Box>
     );
@@ -719,6 +854,15 @@ export function TradeCalendar({ journalId }: CalendarProps) {
       </Group>
       
       {viewMode === 'month' ? renderMonthCalendar() : renderWeekCalendar()}
+      
+      {/* Trade drawer form rendered at root level */}
+      <TradeDrawerForm
+        opened={drawerOpened}
+        onClose={handleDrawerClose}
+        onSuccess={handleDrawerSuccess}
+        editTradeId={editTradeId || undefined}
+        journalId={journalId}
+      />
     </>
   );
 }

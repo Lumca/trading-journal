@@ -25,19 +25,24 @@ export function JournalSelector() {
   // Only process journals if it's a valid array
   const journalList = Array.isArray(journals) ? journals : [];
   
-  // Create an array of journal options if journals is valid
-  const journalOptions = journalList.length > 0 
-    ? journalList.map(journal => ({
-        value: String(journal.id),
-        label: journal.name
-      })) 
-    : [];
+  // Create an array of journal options for active journals only
+  const journalOptions = journalList
+    .filter(journal => journal.is_active) // Filter out inactive journals
+    .map(journal => ({
+      value: String(journal.id),
+      label: journal.name
+    }));
   
   // Combine the options safely
   const selectData = [...allOption, ...journalOptions];
 
   // Simple value derived from selectedJournalId
-  const selectValue = selectedJournalId ? String(selectedJournalId) : 'all';
+  // Check if the selected journal is still in the list (it might have been made inactive)
+  const isSelectedJournalActive = selectedJournalId ? 
+    journalList.some(j => j.id === selectedJournalId && j.is_active) : 
+    false;
+  
+  const selectValue = isSelectedJournalActive ? String(selectedJournalId) : 'all';
 
   return (
     <Box style={{ width: '100%' }}>

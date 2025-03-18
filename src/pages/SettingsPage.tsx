@@ -1,4 +1,4 @@
-// src/pages/SettingsPage.tsx
+// src/pages/SettingsPage.tsx with General settings tab removed
 import {
   ActionIcon,
   Alert,
@@ -37,8 +37,11 @@ export function SettingsPage() {
   const [newSymbol, setNewSymbol] = useState('');
   const [newIndicator, setNewIndicator] = useState('');
   const [newStrategy, setNewStrategy] = useState('');
-  const [activeTab, setActiveTab] = useState<string | null>('general');
+  const [activeTab, setActiveTab] = useState<string | null>('symbols');
   const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass>('forex');
+  const [newForexSymbol, setNewForexSymbol] = useState('');
+  const [newCryptoSymbol, setNewCryptoSymbol] = useState('');
+  const [newStockSymbol, setNewStockSymbol] = useState('');
 
   const passwordForm = useForm({
     initialValues: {
@@ -52,7 +55,6 @@ export function SettingsPage() {
   });
 
   const form = useForm<{
-    enable_registration: boolean;
     custom_symbols: string[];
     custom_indicators: string[];
     custom_strategies: string[];
@@ -66,7 +68,6 @@ export function SettingsPage() {
     default_strategies: string[];
   }>({
     initialValues: {
-      enable_registration: true,
       custom_symbols: [],
       custom_indicators: [],
       custom_strategies: [],
@@ -89,19 +90,18 @@ export function SettingsPage() {
     try {
       const settings = await getUserSettings();
       if (settings) {
-          form.setValues({
-        enable_registration: settings.enable_registration !== undefined ? settings.enable_registration : true,
-        custom_symbols: settings.custom_symbols || [],
-        custom_indicators: settings.custom_indicators || [],
-        custom_strategies: settings.custom_strategies || [],
-        default_asset_classes: settings.default_asset_classes || {
-          forex: [],
-          crypto: [],
-          stocks: []
-        },
-        default_indicators: settings.default_indicators || [],
-        default_strategies: settings.default_strategies || []
-      });
+        form.setValues({
+          custom_symbols: settings.custom_symbols || [],
+          custom_indicators: settings.custom_indicators || [],
+          custom_strategies: settings.custom_strategies || [],
+          default_asset_classes: settings.default_asset_classes || {
+            forex: [],
+            crypto: [],
+            stocks: []
+          },
+          default_indicators: settings.default_indicators || [],
+          default_strategies: settings.default_strategies || []
+        });
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -206,41 +206,11 @@ export function SettingsPage() {
 
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List mb="md">
-          <Tabs.Tab value="general">General</Tabs.Tab>
           <Tabs.Tab value="symbols">Symbols & Assets</Tabs.Tab>
           <Tabs.Tab value="indicators">Indicators</Tabs.Tab>
           <Tabs.Tab value="strategies">Strategies</Tabs.Tab>
           <Tabs.Tab value="security">Security</Tabs.Tab>
         </Tabs.List>
-
-        <Tabs.Panel value="general">
-          <form onSubmit={form.onSubmit(handleSaveSettings)}>
-            <Card shadow="sm" p="lg" radius="md" withBorder mb="lg">
-              <Title order={3} mb="md">General Settings</Title>
-              
-              <Stack>
-                <Group>
-                  <Switch
-                    label="Enable Registration"
-                    description="Allow new users to register (admin only)"
-                    checked={form.values.enable_registration}
-                    onChange={(event) => form.setFieldValue('enable_registration', event.currentTarget.checked)}
-                  />
-                </Group>
-                
-                <Alert icon={<IconInfoCircle size={16} />} color="blue">
-                  Note: Disabling registration will prevent new users from creating accounts, but won't affect existing users.
-                </Alert>
-              </Stack>
-              
-              <Group justify="right" mt="xl">
-                <Button type="submit" loading={saving}>
-                  Save Settings
-                </Button>
-              </Group>
-            </Card>
-          </form>
-        </Tabs.Panel>
 
         <Tabs.Panel value="symbols">
           <form onSubmit={form.onSubmit(handleSaveSettings)}>
@@ -256,76 +226,160 @@ export function SettingsPage() {
                 </Tabs.List>
 
                 <Tabs.Panel value="forex">
-                  <Stack>
-                    <Text fw={500}>Default Forex Pairs</Text>
-                    <MultiSelect
-                      data={[
-                        { value: 'EUR/USD', label: 'EUR/USD' },
-                        { value: 'GBP/USD', label: 'GBP/USD' },
-                        { value: 'USD/JPY', label: 'USD/JPY' },
-                        { value: 'AUD/USD', label: 'AUD/USD' },
-                        { value: 'USD/CAD', label: 'USD/CAD' },
-                        { value: 'NZD/USD', label: 'NZD/USD' },
-                        { value: 'USD/CHF', label: 'USD/CHF' },
-                        { value: 'EUR/GBP', label: 'EUR/GBP' },
-                        { value: 'EUR/JPY', label: 'EUR/JPY' },
-                        { value: 'GBP/JPY', label: 'GBP/JPY' }
-                      ]}
-                      placeholder="Select forex pairs"
-                      searchable
-                      value={form.values.default_asset_classes.forex}
-                      onChange={(value) => form.setFieldValue('default_asset_classes.forex', value)}
-                    />
-                  </Stack>
-                </Tabs.Panel>
+  <Stack>
+    <Text fw={500}>Default Forex Pairs</Text>
+    <MultiSelect
+      data={[
+        { value: 'EUR/USD', label: 'EUR/USD' },
+        { value: 'GBP/USD', label: 'GBP/USD' },
+        { value: 'USD/JPY', label: 'USD/JPY' },
+        { value: 'AUD/USD', label: 'AUD/USD' },
+        { value: 'USD/CAD', label: 'USD/CAD' },
+        { value: 'NZD/USD', label: 'NZD/USD' },
+        { value: 'USD/CHF', label: 'USD/CHF' },
+        { value: 'EUR/GBP', label: 'EUR/GBP' },
+        { value: 'EUR/JPY', label: 'EUR/JPY' },
+        { value: 'GBP/JPY', label: 'GBP/JPY' }
+      ]}
+      placeholder="Select forex pairs"
+      searchable
+      value={form.values.default_asset_classes.forex}
+      onChange={(value) => form.setFieldValue('default_asset_classes.forex', value)}
+    />
+    
+    <Divider my="sm" label="Add Custom Forex Pair" labelPosition="center" />
+    
+    <Group>
+      <TextInput
+        placeholder="Add custom forex pair (e.g. EUR/GBP)"
+        value={newForexSymbol}
+        onChange={(e) => setNewForexSymbol(e.target.value)}
+        style={{ flexGrow: 1 }}
+      />
+      <Button 
+        onClick={() => {
+          if (newForexSymbol.trim()) {
+            const symbol = newForexSymbol.trim().toUpperCase();
+            if (!form.values.default_asset_classes.forex.includes(symbol)) {
+              form.setFieldValue('default_asset_classes.forex', [
+                ...form.values.default_asset_classes.forex,
+                symbol
+              ]);
+            }
+            setNewForexSymbol('');
+          }
+        }} 
+        leftSection={<IconPlus size={16} />}
+      >
+        Add
+      </Button>
+    </Group>
+  </Stack>
+</Tabs.Panel>
 
-                <Tabs.Panel value="crypto">
-                  <Stack>
-                    <Text fw={500}>Default Crypto Pairs</Text>
-                    <MultiSelect
-                      data={[
-                        { value: 'BTC/USD', label: 'BTC/USD' },
-                        { value: 'ETH/USD', label: 'ETH/USD' },
-                        { value: 'XRP/USD', label: 'XRP/USD' },
-                        { value: 'LTC/USD', label: 'LTC/USD' },
-                        { value: 'BCH/USD', label: 'BCH/USD' },
-                        { value: 'BNB/USD', label: 'BNB/USD' },
-                        { value: 'ADA/USD', label: 'ADA/USD' },
-                        { value: 'DOT/USD', label: 'DOT/USD' },
-                        { value: 'LINK/USD', label: 'LINK/USD' },
-                        { value: 'XLM/USD', label: 'XLM/USD' }
-                      ]}
-                      placeholder="Select crypto pairs"
-                      searchable
-                      value={form.values.default_asset_classes.crypto}
-                      onChange={(value) => form.setFieldValue('default_asset_classes.crypto', value)}
-                    />
-                  </Stack>
-                </Tabs.Panel>
+<Tabs.Panel value="crypto">
+  <Stack>
+    <Text fw={500}>Default Crypto Pairs</Text>
+    <MultiSelect
+      data={[
+        { value: 'BTC/USD', label: 'BTC/USD' },
+        { value: 'ETH/USD', label: 'ETH/USD' },
+        { value: 'XRP/USD', label: 'XRP/USD' },
+        { value: 'LTC/USD', label: 'LTC/USD' },
+        { value: 'BCH/USD', label: 'BCH/USD' },
+        { value: 'BNB/USD', label: 'BNB/USD' },
+        { value: 'ADA/USD', label: 'ADA/USD' },
+        { value: 'DOT/USD', label: 'DOT/USD' },
+        { value: 'LINK/USD', label: 'LINK/USD' },
+        { value: 'XLM/USD', label: 'XLM/USD' }
+      ]}
+      placeholder="Select crypto pairs"
+      searchable
+      value={form.values.default_asset_classes.crypto}
+      onChange={(value) => form.setFieldValue('default_asset_classes.crypto', value)}
+    />
+    
+    <Divider my="sm" label="Add Custom Crypto Pair" labelPosition="center" />
+    
+    <Group>
+      <TextInput
+        placeholder="Add custom crypto pair (e.g. DOT/USD)"
+        value={newCryptoSymbol}
+        onChange={(e) => setNewCryptoSymbol(e.target.value)}
+        style={{ flexGrow: 1 }}
+      />
+      <Button 
+        onClick={() => {
+          if (newCryptoSymbol.trim()) {
+            const symbol = newCryptoSymbol.trim().toUpperCase();
+            if (!form.values.default_asset_classes.crypto.includes(symbol)) {
+              form.setFieldValue('default_asset_classes.crypto', [
+                ...form.values.default_asset_classes.crypto,
+                symbol
+              ]);
+            }
+            setNewCryptoSymbol('');
+          }
+        }} 
+        leftSection={<IconPlus size={16} />}
+      >
+        Add
+      </Button>
+    </Group>
+  </Stack>
+</Tabs.Panel>
 
-                <Tabs.Panel value="stocks">
-                  <Stack>
-<Text fw={500}>Default Stock Symbols</Text>
-                    <MultiSelect
-                      data={[
-                        { value: 'AAPL', label: 'AAPL - Apple Inc.' },
-                        { value: 'MSFT', label: 'MSFT - Microsoft Corp.' },
-                        { value: 'AMZN', label: 'AMZN - Amazon.com Inc.' },
-                        { value: 'GOOGL', label: 'GOOGL - Alphabet Inc.' },
-                        { value: 'META', label: 'META - Meta Platforms Inc.' },
-                        { value: 'TSLA', label: 'TSLA - Tesla Inc.' },
-                        { value: 'NVDA', label: 'NVDA - NVIDIA Corp.' },
-                        { value: 'JPM', label: 'JPM - JPMorgan Chase & Co.' },
-                        { value: 'V', label: 'V - Visa Inc.' },
-                        { value: 'JNJ', label: 'JNJ - Johnson & Johnson' }
-                      ]}
-                      placeholder="Select stock symbols"
-                      searchable
-                      value={form.values.default_asset_classes.stocks}
-                      onChange={(value) => form.setFieldValue('default_asset_classes.stocks', value)}
-                    />
-                  </Stack>
-                </Tabs.Panel>
+<Tabs.Panel value="stocks">
+  <Stack>
+    <Text fw={500}>Default Stock Symbols</Text>
+    <MultiSelect
+      data={[
+        { value: 'AAPL', label: 'AAPL - Apple Inc.' },
+        { value: 'MSFT', label: 'MSFT - Microsoft Corp.' },
+        { value: 'AMZN', label: 'AMZN - Amazon.com Inc.' },
+        { value: 'GOOGL', label: 'GOOGL - Alphabet Inc.' },
+        { value: 'META', label: 'META - Meta Platforms Inc.' },
+        { value: 'TSLA', label: 'TSLA - Tesla Inc.' },
+        { value: 'NVDA', label: 'NVDA - NVIDIA Corp.' },
+        { value: 'JPM', label: 'JPM - JPMorgan Chase & Co.' },
+        { value: 'V', label: 'V - Visa Inc.' },
+        { value: 'JNJ', label: 'JNJ - Johnson & Johnson' }
+      ]}
+      placeholder="Select stock symbols"
+      searchable
+      value={form.values.default_asset_classes.stocks}
+      onChange={(value) => form.setFieldValue('default_asset_classes.stocks', value)}
+    />
+    
+    <Divider my="sm" label="Add Custom Stock Symbol" labelPosition="center" />
+    
+    <Group>
+      <TextInput
+        placeholder="Add custom stock symbol (e.g. TSLA)"
+        value={newStockSymbol}
+        onChange={(e) => setNewStockSymbol(e.target.value)}
+        style={{ flexGrow: 1 }}
+      />
+      <Button 
+        onClick={() => {
+          if (newStockSymbol.trim()) {
+            const symbol = newStockSymbol.trim().toUpperCase();
+            if (!form.values.default_asset_classes.stocks.includes(symbol)) {
+              form.setFieldValue('default_asset_classes.stocks', [
+                ...form.values.default_asset_classes.stocks,
+                symbol
+              ]);
+            }
+            setNewStockSymbol('');
+          }
+        }} 
+        leftSection={<IconPlus size={16} />}
+      >
+        Add
+      </Button>
+    </Group>
+  </Stack>
+</Tabs.Panel>
 
                 <Tabs.Panel value="custom">
                   <Stack>

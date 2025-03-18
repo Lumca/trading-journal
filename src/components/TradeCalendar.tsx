@@ -47,7 +47,6 @@ export function TradeCalendar({ journalId }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const { getTrades, getTradeEntries, getTradeExits } = useSupabase();
   const { selectedJournal } = useJournal();
   
@@ -253,93 +252,106 @@ export function TradeCalendar({ journalId }: CalendarProps) {
 
   // Calculate detailed profit metrics for a specific date
   const getProfitSummaryForDate = (date: Date): ProfitSummary => {
-    // Initialize summary values
-    const summary: ProfitSummary = {
-      winCount: 0,
-      lossCount: 0,
-      winAmount: 0,
-      lossAmount: 0,
-      netProfit: 0,
-      plannedCount: 0
-    };
-    
-    // Get entry trades for this date and count planned ones
-    const entryTrades = getTradeEntriesForDate(date);
-    summary.plannedCount = entryTrades.filter(t => t.status === 'planned').length;
-    
-    // Get closed trades exited on this date
-    const closedTrades = getTradeExitsForDate(date).filter(t => t.status === 'closed');
-    
-    // Calculate profit metrics from closed trades
-    closedTrades.forEach(trade => {
-      if (trade.profit_loss !== undefined) {
-        if (trade.profit_loss > 0) {
-          summary.winCount++;
-          summary.winAmount += trade.profit_loss;
-        } else if (trade.profit_loss < 0) {
-          summary.lossCount++;
-          summary.lossAmount += Math.abs(trade.profit_loss);
-        }
-      }
-    });
-    
-    // Calculate net profit
-    summary.netProfit = summary.winAmount - summary.lossAmount;
-    
-    return summary;
+  // Initialize summary values
+  const summary: ProfitSummary = {
+    winCount: 0,
+    lossCount: 0,
+    winAmount: 0,
+    lossAmount: 0,
+    netProfit: 0,
+    plannedCount: 0
   };
+  
+  // Get all entry trades for this date
+  const entryTrades = getTradeEntriesForDate(date);
+  
+  // Count planned trades separately
+  summary.plannedCount = entryTrades.filter(t => t.status === 'planned').length;
+  
+  // Get closed trades exited on this date (excluding planned)
+  const closedTrades = getTradeExitsForDate(date).filter(t => t.status === 'closed');
+  
+  // Calculate profit metrics from closed trades only
+  closedTrades.forEach(trade => {
+    if (trade.profit_loss !== undefined) {
+      if (trade.profit_loss > 0) {
+        summary.winCount++;
+        summary.winAmount += trade.profit_loss;
+      } else if (trade.profit_loss < 0) {
+        summary.lossCount++;
+        summary.lossAmount += Math.abs(trade.profit_loss);
+      }
+    }
+  });
+  
+  // Calculate net profit
+  summary.netProfit = summary.winAmount - summary.lossAmount;
+  
+  return summary;
+};
 
   // Calculate detailed profit metrics for a week
   const getProfitSummaryForWeek = (week: Date[]): ProfitSummary => {
-    // Initialize summary values
-    const summary: ProfitSummary = {
-      winCount: 0,
-      lossCount: 0,
-      winAmount: 0,
-      lossAmount: 0,
-      netProfit: 0,
-      plannedCount: 0
-    };
-    
-    // Combine metrics for each day in the week
-    week.forEach(date => {
-      const dailyProfit = getProfitSummaryForDate(date);
-      summary.winCount += dailyProfit.winCount;
-      summary.lossCount += dailyProfit.lossCount;
-      summary.winAmount += dailyProfit.winAmount;
-      summary.lossAmount += dailyProfit.lossAmount;
-      summary.plannedCount += dailyProfit.plannedCount;
-    });
-    
-    // Calculate net profit
-    summary.netProfit = summary.winAmount - summary.lossAmount;
-    
-    return summary;
+  // Initialize summary values
+  const summary: ProfitSummary = {
+    winCount: 0,
+    lossCount: 0,
+    winAmount: 0,
+    lossAmount: 0,
+    netProfit: 0,
+    plannedCount: 0
   };
+  
+  // Combine metrics for each day in the week
+  week.forEach(date => {
+    const dailyProfit = getProfitSummaryForDate(date);
+    summary.winCount += dailyProfit.winCount;
+    summary.lossCount += dailyProfit.lossCount;
+    summary.winAmount += dailyProfit.winAmount;
+    summary.lossAmount += dailyProfit.lossAmount;
+    summary.plannedCount += dailyProfit.plannedCount;
+  });
+  
+  // Calculate net profit
+  summary.netProfit = summary.winAmount - summary.lossAmount;
+  
+  return summary;
+};
 
   // Calculate weekly summary
   const getWeeklySummary = (week: Date[]) => {
-    let totalEntries = 0;
-    let totalExits = 0;
+  let totalEntries = 0;
+  let totalExits = 0;
+  let plannedCount = 0;
+  
+  // Process each day in the week
+  week.forEach(date => {
+    const entriesForDay = getTradeEntriesForDate(date);
+    const exitsForDay = getTradeExitsForDate(date);
     
-    // Process each day in the week
-    week.forEach(date => {
-      const entriesForDay = getTradeEntriesForDate(date);
-      const exitsForDay = getTradeExitsForDate(date);
-      
-      totalEntries += entriesForDay.length;
-      totalExits += exitsForDay.length;
-    });
+    // Count planned trades separately but don't include them in totalEntries
+    plannedCount += entriesForDay.filter(t => t.status === 'planned').length;
     
-    // Get detailed profit metrics
-    const profitSummary = getProfitSummaryForWeek(week);
+    // Only count executed trade entries (not planned)
+    totalEntries += entriesForDay.filter(t => t.status !== 'planned').length;
     
-    return {
-      totalEntries,
-      totalExits,
-      profitSummary
-    };
+    // Only count executed trade exits
+    totalExits += exitsForDay.filter(t => t.status !== 'planned').length;
+  });
+  
+  // Get detailed profit metrics
+  const profitSummary = getProfitSummaryForWeek(week);
+  
+  // Update the plannedCount in the profitSummary
+  profitSummary.plannedCount = plannedCount;
+  
+  return {
+    totalEntries,
+    totalExits,
+    profitSummary
   };
+};
+
 
   // Render a day cell in the calendar
   const renderDayCell = (date: Date, isCurrentMonth: boolean = true) => {
@@ -599,68 +611,68 @@ export function TradeCalendar({ journalId }: CalendarProps) {
 
   // Render weekly summary row
   const renderWeeklySummary = (week: Date[]) => {
-    const summary = getWeeklySummary(week);
-    const profitSummary = summary.profitSummary;
-    
-    return (
-      <Box
-        p="xs"
-        style={{ 
-          border: '1px solid #e9ecef',
-          borderRadius: '4px',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '40px'
-        }}
-      >
-        <Group justify="space-between" mb={4}>
-          <Text size="sm" fw={500}>
-            Week Summary
-          </Text>
-          <Group gap={8}>
-            {summary.totalEntries > 0 && (
-              <Badge size="sm">
-                {summary.totalEntries} {summary.totalEntries === 1 ? 'Entry' : 'Entries'}
-              </Badge>
-            )}
-            {profitSummary.plannedCount > 0 && (
-              <Badge size="sm" color="yellow" variant="outline">
-                {profitSummary.plannedCount} Planned
-              </Badge>
-            )}
-            {summary.totalExits > 0 && (
-              <Badge size="sm">
-                {summary.totalExits} {summary.totalExits === 1 ? 'Exit' : 'Exits'}
-              </Badge>
-            )}
-          </Group>
+  const summary = getWeeklySummary(week);
+  const profitSummary = summary.profitSummary;
+  
+  return (
+    <Box
+      p="xs"
+      style={{ 
+        border: '1px solid #e9ecef',
+        borderRadius: '4px',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '40px'
+      }}
+    >
+      <Group justify="space-between" mb={4}>
+        <Text size="sm" fw={500}>
+          Week Summary
+        </Text>
+        <Group gap={8}>
+          {summary.totalEntries > 0 && (
+            <Badge size="sm">
+              {summary.totalEntries} {summary.totalEntries === 1 ? 'Entry' : 'Entries'}
+            </Badge>
+          )}
+          {profitSummary.plannedCount > 0 && (
+            <Badge size="sm" color="yellow" variant="outline">
+              {profitSummary.plannedCount} Planned
+            </Badge>
+          )}
+          {summary.totalExits > 0 && (
+            <Badge size="sm">
+              {summary.totalExits} {summary.totalExits === 1 ? 'Exit' : 'Exits'}
+            </Badge>
+          )}
         </Group>
-        
-        {/* Add detailed profit breakdown */}
-        <Group justify="space-between">
-          <Group>
-            {profitSummary.winAmount > 0 && (
-              <Text size="xs" fw={700} c="green">
-                +{formatCurrency(profitSummary.winAmount)}
-              </Text>
-            )}
-            
-            {profitSummary.lossAmount > 0 && (
-              <Text size="xs" fw={700} c="red">
-                -{formatCurrency(profitSummary.lossAmount)}
-              </Text>
-            )}
-            
-            {(profitSummary.winAmount > 0 || profitSummary.lossAmount > 0) && (
-              <Text size="xs" fw={700} c={profitSummary.netProfit >= 0 ? 'green' : 'red'}>
-                Net: {formatCurrency(profitSummary.netProfit)}
-              </Text>
-            )}
-          </Group>
+      </Group>
+      
+      {/* Add detailed profit breakdown */}
+      <Group justify="space-between">
+        <Group>
+          {profitSummary.winAmount > 0 && (
+            <Text size="xs" fw={700} c="green">
+              +{formatCurrency(profitSummary.winAmount)}
+            </Text>
+          )}
+          
+          {profitSummary.lossAmount > 0 && (
+            <Text size="xs" fw={700} c="red">
+              -{formatCurrency(profitSummary.lossAmount)}
+            </Text>
+          )}
+          
+          {(profitSummary.winAmount > 0 || profitSummary.lossAmount > 0) && (
+            <Text size="xs" fw={700} c={profitSummary.netProfit >= 0 ? 'green' : 'red'}>
+              Net: {formatCurrency(profitSummary.netProfit)}
+            </Text>
+          )}
         </Group>
-      </Box>
-    );
-  };
+      </Group>
+    </Box>
+  );
+};
   
   // Render calendar for month view
   const renderMonthCalendar = () => {
@@ -743,49 +755,6 @@ export function TradeCalendar({ journalId }: CalendarProps) {
     );
   };
   
-  // Render calendar for week view
-  const renderWeekCalendar = () => {
-    // Clone current date
-    const date = new Date(currentDate);
-    
-    // Get the first day of the week (Sunday)
-    const day = date.getDay();
-    date.setDate(date.getDate() - day);
-    
-    // Generate array of 7 days starting from Sunday
-    const week = [];
-    for (let i = 0; i < 7; i++) {
-      const currentDay = new Date(date);
-      week.push(currentDay);
-      date.setDate(date.getDate() + 1);
-    }
-    
-    return (
-      <>
-        <Grid columns={7} gutter="xs" mb="xs">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <Grid.Col span={1} key={day}>
-              <Text fw={500} ta="center">{day}</Text>
-            </Grid.Col>
-          ))}
-        </Grid>
-        
-        <Grid columns={7} gutter="xs">
-          {week.map((date, i) => (
-            <Grid.Col span={1} key={i}>
-              {renderDayCell(date, date.getMonth() === currentDate.getMonth())}
-            </Grid.Col>
-          ))}
-        </Grid>
-        
-        {/* Weekly summary row */}
-        <Box mt="xs">
-          {renderWeeklySummary(week)}
-        </Box>
-      </>
-    );
-  };
-  
   if (loading) {
     return (
       <Center style={{ height: '300px' }}>
@@ -812,15 +781,6 @@ export function TradeCalendar({ journalId }: CalendarProps) {
         </Group>
         
         <Group>
-          <Select
-            value={viewMode}
-            onChange={(value) => setViewMode(value as 'month' | 'week')}
-            data={[
-              { value: 'month', label: 'Month View' },
-              { value: 'week', label: 'Week View' }
-            ]}
-          />
-          
           <Button variant="outline" onClick={goToToday}>
             Today
           </Button>
@@ -853,7 +813,7 @@ export function TradeCalendar({ journalId }: CalendarProps) {
         </ActionIcon>
       </Group>
       
-      {viewMode === 'month' ? renderMonthCalendar() : renderWeekCalendar()}
+      {renderMonthCalendar()}
       
       {/* Trade drawer form rendered at root level */}
       <TradeDrawerForm

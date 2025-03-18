@@ -325,66 +325,6 @@ export function DashboardPage() {
                   </Box>
                 </Card>
               </Grid.Col>
-              
-              {/* Recent Trades */}
-              <Grid.Col span={12}>
-                <Card shadow="sm" padding="lg" radius="md" withBorder>
-                  <Group justify="apart" mb="md">
-                    <Title order={3}>Recent Trades</Title>
-                    <Badge>Last {recentTrades.length} trades</Badge>
-                  </Group>
-                  
-                  <Table striped highlightOnHover withTableBorder>
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th>Symbol</Table.Th>
-                        <Table.Th>Direction</Table.Th>
-                        <Table.Th>Entry Date</Table.Th>
-                        <Table.Th>Status</Table.Th>
-                        <Table.Th>P/L</Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {recentTrades.map((trade) => (
-                        <Table.Tr 
-                          key={trade.id}
-                          style={{ cursor: 'pointer' }} 
-                          onClick={() => handleViewTrade(trade)}
-                        >
-                          <Table.Td>{trade.symbol}</Table.Td>
-                          <Table.Td>
-                            <Badge color={trade.direction === 'long' ? 'green' : 'red'}>
-                              {(trade.direction || '').toUpperCase()}
-                            </Badge>
-                          </Table.Td>
-                          <Table.Td>{new Date(trade.entry_date).toLocaleDateString()}</Table.Td>
-                          <Table.Td>
-                            <Badge color={trade.status === 'open' ? 'blue' : 'green'}>
-                              {trade.status.toUpperCase()}
-                            </Badge>
-                          </Table.Td>
-                          <Table.Td>
-                            {trade.profit_loss !== undefined ? (
-                              <Group gap={4}>
-                                {trade.profit_loss >= 0 ? (
-                                  <IconTrendingUp size={16} color="green" />
-                                ) : (
-                                  <IconTrendingDown size={16} color="red" />
-                                )}
-                                <Text c={trade.profit_loss >= 0 ? 'green' : 'red'} fw={700}>
-                                  {formatCurrency(trade.profit_loss)}
-                                </Text>
-                              </Group>
-                            ) : (
-                              '-'
-                            )}
-                          </Table.Td>
-                        </Table.Tr>
-                      ))}
-                    </Table.Tbody>
-                  </Table>
-                </Card>
-              </Grid.Col>
             </Grid>
           </>
         )}

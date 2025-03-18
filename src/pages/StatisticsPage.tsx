@@ -16,6 +16,7 @@ import {
   useMantineTheme
 } from '@mantine/core';
 import {
+  IconActivity,
   IconArrowDownRight,
   IconArrowUpRight,
   IconCalendarStats,
@@ -28,6 +29,7 @@ import { TradeStatsDisplay } from '../components/TradeStats';
 import { useJournal } from '../contexts/JournalContext';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { Trade } from '../lib/supabase';
+import { IndicatorPerformanceAnalysis } from '../components/IndicatorPerformanceAnalysis';
 
 // Chart components
 import {
@@ -393,6 +395,9 @@ export function StatisticsPage() {
             <Tabs.Tab value="strategies" leftSection={<IconChartPie size={14} />}>
               Strategies
             </Tabs.Tab>
+            <Tabs.Tab value="indicators" leftSection={<IconActivity size={14} />}>
+            Indicators
+            </Tabs.Tab>
             <Tabs.Tab value="distribution" leftSection={<IconCalendarStats size={14} />}>
               Distribution
             </Tabs.Tab>
@@ -477,6 +482,10 @@ export function StatisticsPage() {
                 </BarChart>
               </ResponsiveContainer>
             </Paper>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="indicators" pt="md">
+            <IndicatorPerformanceAnalysis />
           </Tabs.Panel>
 
           <Tabs.Panel value="distribution" pt="md">

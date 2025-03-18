@@ -58,7 +58,6 @@ export function JournalList({ onEditJournal, onSelectJournal }: JournalListProps
         <Table.Tr>
           <Table.Th>Name</Table.Th>
           <Table.Th>Description</Table.Th>
-          <Table.Th>Currency</Table.Th>
           <Table.Th>Status</Table.Th>
           <Table.Th>Actions</Table.Th>
         </Table.Tr>
@@ -68,7 +67,6 @@ export function JournalList({ onEditJournal, onSelectJournal }: JournalListProps
           <Table.Tr key={journal.id} style={{ cursor: 'pointer' }} onClick={() => onSelectJournal(journal)}>
             <Table.Td>{journal.name}</Table.Td>
             <Table.Td>{journal.description || '-'}</Table.Td>
-            <Table.Td>{journal.base_currency}</Table.Td>
             <Table.Td>
               <Badge color={journal.is_active ? 'green' : 'gray'}>
                 {journal.is_active ? 'Active' : 'Inactive'}

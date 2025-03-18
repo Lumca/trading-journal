@@ -1,11 +1,13 @@
 // src/App.tsx
 import {
+  ActionIcon,
   AppShell,
   Box,
   Burger,
   Divider,
   Group,
   MantineProvider,
+  Menu,
   Text,
   Title,
   createTheme,
@@ -26,6 +28,8 @@ import { JournalsPage } from './pages/JournalsPage';
 import { LoginPage } from './pages/LoginPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { StatisticsPage } from './pages/StatisticsPage';
+import { TradeDetailPage } from './pages/TradeDetailPage';
+import { IconChevronDown } from '@tabler/icons-react';
 
 // Define a custom theme with dark mode enabled by default
 const theme = createTheme({
@@ -96,42 +100,80 @@ function AppContent() {
       }}
       header={{ height: 60 }}
     >
-      <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group>
-            <Burger
-              opened={mobileOpened}
-              onClick={toggleMobile}
-              size="sm"
-              color={theme.colors.gray[6]}
-              hiddenFrom="sm"
-            />
-            <Burger
-              opened={desktopOpened}
-              onClick={toggleDesktop}
-              size="sm"
-              color={theme.colors.gray[6]}
-              visibleFrom="sm"
-            />
-            <Title order={3}>Trading Journal</Title>
-          </Group>
-          
-          <Group>
-            {/* Only show journal selector when logged in and on certain pages */}
-            {user && ['dashboard', 'journals', 'statistics', 'calendar'].includes(activeView) && (
-              <Box style={{ width: '200px' }}>
+      // Modified AppShell.Header section for App.tsx
+
+<AppShell.Header>
+  <Group h="100%" px="md" style={{ justifyContent: 'space-between' }}>
+    <Group>
+      <Burger
+        opened={mobileOpened}
+        onClick={toggleMobile}
+        size="sm"
+        color={theme.colors.gray[6]}
+        hiddenFrom="sm"
+      />
+      <Burger
+        opened={desktopOpened}
+        onClick={toggleDesktop}
+        size="sm"
+        color={theme.colors.gray[6]}
+        visibleFrom="sm"
+      />
+      <Title order={3} size="h4" visibleFrom="xs" hiddenFrom="sm">TJ</Title>
+      <Title order={3} visibleFrom="sm">Trading Journal</Title>
+    </Group>
+    
+    {/* Mobile optimized right section */}
+    <Box>
+      <Group visibleFrom="md" spacing="md">
+        {/* Only show journal selector when logged in and on certain pages */}
+        {user && ['dashboard', 'journals', 'statistics', 'calendar'].includes(activeView) && (
+          <Box style={{ width: '200px' }}>
+            <JournalSelector />
+          </Box>
+        )}
+        {user && <Divider orientation="vertical" />}
+        {user && (
+          <Text size="sm" fw={500}>
+            {user.email}
+          </Text>
+        )}
+      </Group>
+      
+      {/* Mobile dropdown for Journal selector and user info */}
+      <Menu shadow="md" width={200} position="bottom-end" hiddenFrom="md">
+        <Menu.Target>
+          <ActionIcon variant="subtle">
+            <IconChevronDown size={18} />
+          </ActionIcon>
+        </Menu.Target>
+        
+        <Menu.Dropdown>
+          {user && ['dashboard', 'journals', 'statistics', 'calendar'].includes(activeView) && (
+            <>
+              <Menu.Label>Journal</Menu.Label>
+              <Box p="xs">
                 <JournalSelector />
               </Box>
-            )}
-            {user && <Divider orientation="vertical" />}
-            {user && (
-              <Text size="sm" fw={500}>
-                {user.email}
-              </Text>
-            )}
-          </Group>
-        </Group>
-      </AppShell.Header>
+              <Menu.Divider />
+            </>
+          )}
+          
+          {user && (
+            <>
+              <Menu.Label>User</Menu.Label>
+              <Menu.Item>
+                <Text size="sm" fw={500} style={{ wordBreak: 'break-all' }}>
+                  {user.email}
+                </Text>
+              </Menu.Item>
+            </>
+          )}
+        </Menu.Dropdown>
+      </Menu>
+    </Box>
+  </Group>
+</AppShell.Header>
 
       <AppShell.Navbar p="md">
         <Navigation
@@ -146,6 +188,7 @@ function AppContent() {
       <AppShell.Main>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/trades/:tradeId" element={<TradeDetailPage />} />
           <Route path="/journals" element={<JournalsPage />} />
           <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="/calendar" element={<CalendarPage />} />

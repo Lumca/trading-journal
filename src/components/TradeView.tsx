@@ -198,20 +198,6 @@ export function TradeView({ trade, onBack, onEdit }: TradeViewProps) {
                 
                 <Grid.Col span={6}>
                   <Stack gap="xs">
-                    <Text fw={500}>Average Entry Price</Text>
-                    <Text>{formatCurrency(totals.avgEntryPrice)}</Text>
-                  </Stack>
-                </Grid.Col>
-                
-                <Grid.Col span={6}>
-                  <Stack gap="xs">
-                    <Text fw={500}>Average Exit Price</Text>
-                    <Text>{formatCurrency(totals.avgExitPrice)}</Text>
-                  </Stack>
-                </Grid.Col>
-                
-                <Grid.Col span={6}>
-                  <Stack gap="xs">
                     <Text fw={500}>Total Quantity</Text>
                     <Text>{totals.totalEntryQuantity}</Text>
                   </Stack>

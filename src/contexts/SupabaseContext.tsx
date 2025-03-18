@@ -329,137 +329,159 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   // Function to update a trade with multiple entry/exit points
   const updateTrade = async (id: number, trade: Partial<Trade> & { 
-    entries?: TradeEntry[]; 
-    exits?: TradeExit[]; 
-  }): Promise<Trade | null> => {
-    if (!user) return null;
+  entries?: TradeEntry[]; 
+  exits?: TradeExit[]; 
+}): Promise<Trade | null> => {
+  if (!user) return null;
 
-    try {
-      // Extract entries and exits from the trade object
-      const { entries, exits, ...mainTradeData } = trade;
+  try {
+    // Extract entries and exits from the trade object
+    const { entries, exits, ...mainTradeData } = trade;
+    
+    // If we're updating a trade with entries/exits, recalculate profit/loss correctly
+    if (entries && exits && mainTradeData.status === 'closed') {
+      // Get current trade data to have complete direction information
+      const { data: currentTrade } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('id', id)
+        .single();
       
-      // If we're updating prices or quantities, recalculate profit/loss
-      if (mainTradeData.entry_price || mainTradeData.exit_price || 
-          mainTradeData.quantity || mainTradeData.direction || 
-          mainTradeData.status) {
+      if (currentTrade) {
+        const direction = mainTradeData.direction || currentTrade.direction;
         
-        // Get current trade data to have complete information for calculations
-        const { data: currentTrade } = await supabase
-          .from('trades')
-          .select('*')
-          .eq('id', id)
-          .single();
-  
-        if (currentTrade) {
-          const entryPrice = mainTradeData.entry_price || currentTrade.entry_price;
-          const exitPrice = mainTradeData.exit_price || currentTrade.exit_price;
-          const quantity = mainTradeData.quantity || currentTrade.quantity;
-          const direction = mainTradeData.direction || currentTrade.direction;
-          const status = mainTradeData.status || currentTrade.status;
-  
-          // Calculate gross P/L (without deducting fees)
-          if (status === 'closed' && exitPrice) {
-            if (direction === 'long') {
-              mainTradeData.profit_loss = (exitPrice - entryPrice) * quantity;
-              mainTradeData.profit_loss_percent = ((exitPrice - entryPrice) / entryPrice) * 100;
-            } else {
-              mainTradeData.profit_loss = (entryPrice - exitPrice) * quantity;
-              mainTradeData.profit_loss_percent = ((entryPrice - exitPrice) / entryPrice) * 100;
-            }
+        // Filter executed exits only
+        const executedExits = exits.filter(exit => exit.execution_status === 'executed');
+        
+        if (executedExits.length > 0) {
+          // Calculate total entry value and quantity
+          const totalEntryValue = entries.reduce(
+            (sum, entry) => sum + entry.price * entry.quantity, 
+            0
+          );
+          
+          // Calculate total exit value and quantity
+          const totalExitValue = executedExits.reduce(
+            (sum, exit) => sum + (exit.price || 0) * (exit.quantity || 0), 
+            0
+          );
+          
+          // Calculate gross P/L based on direction
+          let grossProfitLoss = 0;
+          if (direction === 'long') {
+            grossProfitLoss = totalExitValue - totalEntryValue;
+          } else {
+            grossProfitLoss = totalEntryValue - totalExitValue;
           }
+          
+          // Get fees from the trade data or current trade
+          const fees = mainTradeData.fees || currentTrade.fees || 0;
+          
+          // Calculate net P/L after fees
+          const netProfitLoss = grossProfitLoss - fees;
+          
+          // Calculate P/L percentage based on total investment
+          const profitLossPercent = totalEntryValue > 0 
+            ? (netProfitLoss / totalEntryValue) * 100 
+            : 0;
+          
+          // Update the main trade data with calculated values
+          mainTradeData.profit_loss = netProfitLoss;
+          mainTradeData.profit_loss_percent = profitLossPercent;
         }
       }
+    }
   
-      // Update the main trade record
-      const { data: tradeData, error: tradeError } = await supabase
-        .from('trades')
-        .update(mainTradeData)
-        .eq('id', id)
-        .select()
-        .single();
+    // Update the main trade record
+    const { data: tradeData, error: tradeError } = await supabase
+      .from('trades')
+      .update(mainTradeData)
+      .eq('id', id)
+      .select()
+      .single();
   
-      if (tradeError) {
-        console.error('Error updating trade:', tradeError);
+    if (tradeError) {
+      console.error('Error updating trade:', tradeError);
+      return null;
+    }
+  
+    // Handle entries if provided
+    if (entries) {
+      // First, delete all existing entries
+      const { error: deleteEntriesError } = await supabase
+        .from('trade_entries')
+        .delete()
+        .eq('trade_id', id);
+  
+      if (deleteEntriesError) {
+        console.error('Error deleting existing entries:', deleteEntriesError);
         return null;
       }
   
-      // Handle entries if provided
-      if (entries) {
-        // First, delete all existing entries
-        const { error: deleteEntriesError } = await supabase
+      // Then insert all new entries
+      if (entries.length > 0) {
+        const entryRecords = entries.map(entry => ({
+          trade_id: id,
+          date: entry.date,
+          price: entry.price,
+          quantity: entry.quantity,
+          notes: entry.notes
+        }));
+  
+        const { error: insertEntriesError } = await supabase
           .from('trade_entries')
-          .delete()
-          .eq('trade_id', id);
+          .insert(entryRecords);
   
-        if (deleteEntriesError) {
-          console.error('Error deleting existing entries:', deleteEntriesError);
+        if (insertEntriesError) {
+          console.error('Error inserting updated entries:', insertEntriesError);
           return null;
         }
-  
-        // Then insert all new entries
-        if (entries.length > 0) {
-          const entryRecords = entries.map(entry => ({
-            trade_id: id,
-            date: entry.date,
-            price: entry.price,
-            quantity: entry.quantity,
-            notes: entry.notes
-          }));
-  
-          const { error: insertEntriesError } = await supabase
-            .from('trade_entries')
-            .insert(entryRecords);
-  
-          if (insertEntriesError) {
-            console.error('Error inserting updated entries:', insertEntriesError);
-            return null;
-          }
-        }
       }
-  
-      // Handle exits if provided
-      if (exits) {
-        // First, delete all existing exits
-        const { error: deleteExitsError } = await supabase
-          .from('trade_exits')
-          .delete()
-          .eq('trade_id', id);
-  
-        if (deleteExitsError) {
-          console.error('Error deleting existing exits:', deleteExitsError);
-          return null;
-        }
-  
-        // Then insert all new exits
-        if (exits.length > 0) {
-          const exitRecords = exits.map(exit => ({
-            trade_id: id,
-            date: exit.date,
-            price: exit.price,
-            quantity: exit.quantity,
-            is_stop_loss: exit.is_stop_loss,
-            is_take_profit: exit.is_take_profit,
-            execution_status: exit.execution_status,
-            notes: exit.notes
-          }));
-  
-          const { error: insertExitsError } = await supabase
-            .from('trade_exits')
-            .insert(exitRecords);
-  
-          if (insertExitsError) {
-            console.error('Error inserting updated exits:', insertExitsError);
-            return null;
-          }
-        }
-      }
-  
-      // Return the updated trade with all its details
-      return getTrade(id);
-    } catch (error) {
-      console.error('Error in updateTrade:', error);
-      return null;
     }
+  
+    // Handle exits if provided
+    if (exits) {
+      // First, delete all existing exits
+      const { error: deleteExitsError } = await supabase
+        .from('trade_exits')
+        .delete()
+        .eq('trade_id', id);
+  
+      if (deleteExitsError) {
+        console.error('Error deleting existing exits:', deleteExitsError);
+        return null;
+      }
+  
+      // Then insert all new exits
+      if (exits.length > 0) {
+        const exitRecords = exits.map(exit => ({
+          trade_id: id,
+          date: exit.date,
+          price: exit.price,
+          quantity: exit.quantity,
+          is_stop_loss: exit.is_stop_loss,
+          is_take_profit: exit.is_take_profit,
+          execution_status: exit.execution_status,
+          notes: exit.notes
+        }));
+  
+        const { error: insertExitsError } = await supabase
+          .from('trade_exits')
+          .insert(exitRecords);
+  
+        if (insertExitsError) {
+          console.error('Error inserting updated exits:', insertExitsError);
+          return null;
+        }
+      }
+    }
+  
+    // Return the updated trade with all its details
+    return getTrade(id);
+  } catch (error) {
+    console.error('Error in updateTrade:', error);
+    return null;
+  }
   };
 
   // Function to delete a trade

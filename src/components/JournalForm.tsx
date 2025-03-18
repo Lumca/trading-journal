@@ -4,7 +4,6 @@ import {
   Button,
   Group,
   Paper,
-  Select,
   Stack,
   Switch,
   Textarea,
@@ -35,12 +34,10 @@ export function JournalForm({ editJournal, onSuccess, onCancel }: JournalFormPro
       name: editJournal?.name || '',
       description: editJournal?.description || '',
       is_active: editJournal?.is_active ?? true,
-      base_currency: editJournal?.base_currency || 'USD',
       tags: editJournal?.tags?.join(', ') || '',
     },
     validate: {
       name: (value) => (value.trim() ? null : 'Journal name is required'),
-      base_currency: (value) => (value.trim() ? null : 'Base currency is required'),
     },
   });
 
@@ -51,7 +48,7 @@ export function JournalForm({ editJournal, onSuccess, onCancel }: JournalFormPro
         name: values.name.trim(),
         description: values.description.trim() || undefined,
         is_active: values.is_active,
-        base_currency: values.base_currency,
+        base_currency: 'USD', // Hardcoded to USD since we're removing the selection
         tags: values.tags ? values.tags.split(',').map(tag => tag.trim()) : undefined,
       };
 
@@ -72,19 +69,6 @@ export function JournalForm({ editJournal, onSuccess, onCancel }: JournalFormPro
       setLoading(false);
     }
   };
-
-  const currencyOptions = [
-    { value: 'USD', label: 'USD - US Dollar' },
-    { value: 'EUR', label: 'EUR - Euro' },
-    { value: 'GBP', label: 'GBP - British Pound' },
-    { value: 'JPY', label: 'JPY - Japanese Yen' },
-    { value: 'AUD', label: 'AUD - Australian Dollar' },
-    { value: 'CAD', label: 'CAD - Canadian Dollar' },
-    { value: 'CHF', label: 'CHF - Swiss Franc' },
-    { value: 'CNY', label: 'CNY - Chinese Yuan' },
-    { value: 'HKD', label: 'HKD - Hong Kong Dollar' },
-    { value: 'NZD', label: 'NZD - New Zealand Dollar' },
-  ];
 
   return (
     <Paper p="md" shadow="xs" radius="md">
@@ -110,15 +94,6 @@ export function JournalForm({ editJournal, onSuccess, onCancel }: JournalFormPro
             label="Description"
             placeholder="Details about this journal..."
             {...form.getInputProps('description')}
-          />
-
-          <Select
-            required
-            label="Base Currency"
-            placeholder="Select base currency"
-            data={currencyOptions}
-            searchable
-            {...form.getInputProps('base_currency')}
           />
 
           <TextInput

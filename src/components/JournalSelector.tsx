@@ -1,5 +1,5 @@
 // src/components/JournalSelector.tsx
-import { Select, Skeleton } from '@mantine/core';
+import { Select, Skeleton, Box } from '@mantine/core';
 import { useAuth } from '../contexts/AuthContext';
 import { useJournal } from '../contexts/JournalContext';
 
@@ -17,7 +17,7 @@ export function JournalSelector() {
 
   // If not logged in or loading, show minimal UI
   if (!user) return null;
-  if (loading) return <Skeleton height={36} width={200} />;
+  if (loading) return <Skeleton height={36} width="100%" />;
 
   // Create a static array for the "All Journals" option
   const allOption = [{ value: 'all', label: 'All Journals' }];
@@ -40,13 +40,24 @@ export function JournalSelector() {
   const selectValue = selectedJournalId ? String(selectedJournalId) : 'all';
 
   return (
-    <Select
-      placeholder="Select Journal"
-      data={selectData}
-      value={selectValue}
-      onChange={handleJournalChange}
-      searchable
-      clearable={false}
-    />
+    <Box style={{ width: '100%' }}>
+      <Select
+        placeholder="Select Journal"
+        data={selectData}
+        value={selectValue}
+        onChange={handleJournalChange}
+        searchable
+        clearable={false}
+        size="sm"
+        styles={(theme) => ({
+          input: {
+            fontSize: theme.fontSizes.sm,
+          },
+          item: {
+            fontSize: theme.fontSizes.sm,
+          },
+        })}
+      />
+    </Box>
   );
 }

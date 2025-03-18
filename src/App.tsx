@@ -32,6 +32,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { StatisticsPage } from './pages/StatisticsPage';
 import { TradeDetailPage } from './pages/TradeDetailPage';
+import { TradesPage } from './pages/TradesPage';
 
 function AppContent() {
   const { user, loading: authLoading } = useAuth();
@@ -43,14 +44,15 @@ function AppContent() {
   
   // Determine active view from current path
   const getActiveViewFromPath = (path: string) => {
-    if (path.startsWith('/dashboard')) return 'dashboard';
-    if (path.startsWith('/journals')) return 'journals';
-    if (path.startsWith('/statistics')) return 'statistics';
-    if (path.startsWith('/calendar')) return 'calendar';
-    if (path.startsWith('/settings')) return 'settings';
-    if (path.startsWith('/trades')) return 'dashboard'; // Trades detail counts as dashboard
-    return 'dashboard';
-  };
+  if (path.startsWith('/dashboard')) return 'dashboard';
+  if (path.startsWith('/trades/')) return 'trades';
+  if (path.startsWith('/trades')) return 'trades';
+  if (path.startsWith('/journals')) return 'journals';
+  if (path.startsWith('/statistics')) return 'statistics';
+  if (path.startsWith('/calendar')) return 'calendar';
+  if (path.startsWith('/settings')) return 'settings';
+  return 'dashboard';
+};
   
   const activeView = getActiveViewFromPath(location.pathname);
   
@@ -169,6 +171,7 @@ function AppContent() {
       <AppShell.Main>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/trades" element={<TradesPage />} />
           <Route path="/trades/:tradeId" element={<TradeDetailPage />} />
           <Route path="/journals" element={<JournalsPage />} />
           <Route path="/statistics" element={<StatisticsPage />} />

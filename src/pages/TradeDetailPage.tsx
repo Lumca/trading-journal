@@ -1,106 +1,81 @@
-// src/pages/TradeDetailPage.tsx
-import {
-  ActionIcon,
-  Breadcrumbs,
-  Center,
-  Container,
-  Group,
-  Loader,
-  Stack,
-  Text,
-  Title,
-  Anchor
-} from '@mantine/core';
-import { IconArrowLeft, IconRefresh } from '@tabler/icons-react';
+// src/pages/TradeDetailPage.tsx - Updated with improved navigation
+import { Button, Center, Container, Loader, Stack, Title } from '@mantine/core';
+import { IconArrowLeft } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { TradeView } from '../components/TradeView';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { Trade } from '../lib/supabase';
 
 export function TradeDetailPage() {
   const { tradeId } = useParams<{ tradeId: string }>();
-  const { getTrade } = useSupabase();
   const [trade, setTrade] = useState<Trade | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { getTrade } = useSupabase();
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get the previous page from the location state if available
+  const previousPath = location.state?.from || '/dashboard';
 
   useEffect(() => {
-    fetchTrade();
+    fetchTradeDetails();
   }, [tradeId]);
 
-  const fetchTrade = async () => {
+  const fetchTradeDetails = async () => {
     if (!tradeId) {
-      navigate('/dashboard');
+      setError('No trade ID provided');
+      setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
       const tradeData = await getTrade(parseInt(tradeId));
-      
-      if (!tradeData) {
-        // Trade not found, redirect to dashboard
-        navigate('/dashboard');
-        return;
+      if (tradeData) {
+        setTrade(tradeData);
+        setError(null);
+      } else {
+        setError('Trade not found');
       }
-      
-      setTrade(tradeData);
-    } catch (error) {
-      console.error('Error fetching trade:', error);
-      navigate('/dashboard');
+    } catch (err) {
+      console.error('Error fetching trade:', err);
+      setError('Error loading trade details');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleBackToDashboard = () => {
-    navigate('/dashboard');
-  };
-
-  const handleRefresh = () => {
-    fetchTrade();
+  const handleBack = () => {
+    navigate(-1);
   };
 
   const handleTradeUpdated = () => {
-    fetchTrade();
+    fetchTradeDetails(); // Refresh trade data
   };
-
-  const items = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: trade ? `Trade: ${trade.symbol}` : 'Trade Details', href: '#' },
-  ];
 
   if (loading) {
     return (
       <Container size="xl" py="xl">
-        <Breadcrumbs mb="lg">
-          {items.map((item, index) => (
-            <Anchor 
-              component={Link} 
-              to={item.href} 
-              key={index}
-              c={index === items.length - 1 ? undefined : "dimmed"}
-            >
-              {item.title}
-            </Anchor>
-          ))}
-        </Breadcrumbs>
-        <Center h={300}>
+        <Center>
           <Loader size="xl" />
         </Center>
       </Container>
     );
   }
 
-  if (!trade) {
+  if (error || !trade) {
     return (
       <Container size="xl" py="xl">
-        <Stack align="center" spacing="md">
-          <Text>Trade not found.</Text>
-          <Anchor component={Link} to="/dashboard">
-            Return to Dashboard
-          </Anchor>
+        <Stack gap="md">
+          <Title order={1}>Trade Details</Title>
+          <Center>
+            <Title order={3} c="red">
+              {error || 'Trade not found'}
+            </Title>
+          </Center>
         </Stack>
       </Container>
     );
@@ -109,27 +84,10 @@ export function TradeDetailPage() {
   return (
     <Container size="xl" py="xl">
       <Stack gap="md">
-        <Group justify="space-between" align="center">
-          <Breadcrumbs>
-            {items.map((item, index) => (
-              <Anchor 
-                component={Link} 
-                to={item.href} 
-                key={index}
-                c={index === items.length - 1 ? undefined : "dimmed"}
-              >
-                {item.title}
-              </Anchor>
-            ))}
-          </Breadcrumbs>
-          <ActionIcon variant="subtle" onClick={handleRefresh}>
-            <IconRefresh size={18} />
-          </ActionIcon>
-        </Group>
-
+        <Title order={1}>Trade Details</Title>
         <TradeView 
           trade={trade} 
-          onBack={handleBackToDashboard} 
+          onBack={handleBack} 
           onEdit={handleTradeUpdated}
         />
       </Stack>

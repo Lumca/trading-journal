@@ -1,10 +1,11 @@
-// src/components/Navigation.tsx
+// src/components/Navigation.tsx - Updated with Trades link
 import { Box, NavLink, rem } from '@mantine/core';
 import {
   IconBook,
   IconCalendar,
   IconChartBar,
   IconDashboard,
+  IconList,
   IconLogout,
   IconSettings
 } from '@tabler/icons-react';
@@ -25,6 +26,7 @@ export function Navigation({ opened, onClose, onNavigate, active, isCollapsed }:
 
   const links = [
     { icon: IconDashboard, label: 'Dashboard', value: 'dashboard' },
+    { icon: IconList, label: 'All Trades', value: 'trades' },
     { icon: IconBook, label: 'Journals', value: 'journals' },
     { icon: IconChartBar, label: 'Statistics', value: 'statistics' },
     { icon: IconCalendar, label: 'Calendar', value: 'calendar' },

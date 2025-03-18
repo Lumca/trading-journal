@@ -151,7 +151,6 @@ export function IndicatorPerformanceAnalysis() {
       
       // Sort by most profitable
       performanceData.sort((a, b) => b.netProfitLoss - a.netProfitLoss);
-      console.log('Indicator Performance Data:', performanceData);
       setIndicatorPerformance(performanceData);
     } catch (error) {
       console.error('Error fetching indicator performance data:', error);

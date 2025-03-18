@@ -1,116 +1,112 @@
-# Trading Journal Setup Guide
+# Trading Journal
 
-This guide will help you set up your Trading Journal application with Supabase as the backend.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLumca%2Ftrading-journal)
 
-## Prerequisites
+A comprehensive web application for traders to track and analyze their trading performance.
 
-- Node.js 16.x or higher
-- npm or yarn
-- A Supabase account
+## Features
 
-## Step 1: Clone and Install Dependencies
+- 📊 Track trades across multiple journals
+- 📈 Visualize performance with detailed statistics
+- 📅 View trades on an interactive calendar
+- 🔍 Filter and search through your trading history
+- 📱 Responsive design that works on desktop and mobile
+- 🌓 Multiple themes with light and dark mode
+- 🔒 Secure authentication with Supabase
 
-1. Clone or download the project repository
-2. Navigate to the project directory
-3. Install the dependencies:
+## Tech Stack
 
-```bash
-npm install
-```
+- **Frontend**: React, TypeScript, Vite
+- **UI Components**: Mantine UI
+- **Auth & Database**: Supabase
+- **Routing**: React Router
+- **Charts**: Recharts
+- **Styling**: CSS-in-JS with Mantine
 
-## Step 2: Set Up Supabase
+## Getting Started
 
-1. Sign up or log in to [Supabase](https://supabase.com/)
-2. Create a new project
-3. Once your project is created, navigate to the SQL Editor in the Supabase dashboard
-4. Create the necessary tables and functions by running the SQL queries found in the `supabase-schema.sql` file
+### Prerequisites
 
-## Step 3: Configure Environment Variables
+- Node.js (v14+)
+- npm
+- Supabase account
 
-1. Copy the `.env` file to `.env.local`
-2. Update the Supabase URL and anon key in the `.env.local` file:
+### Setup
 
-```
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Lumca/trading-journal.git
+   cd trading-journal
+   ```
 
-You can find these values in your Supabase project dashboard under Settings > API.
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-## Step 4: Start the Development Server
+3. Create a `.env` file in the root directory with your Supabase credentials:
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-```bash
-npm run dev
-```
+4. Start the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
 
-The application should now be running at [http://localhost:5173](http://localhost:5173)
+5. Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-## Step 5: Create a User Account
+### Database Setup
 
-1. Open the application in your browser
-2. Click on "Create account" to register a new user
-3. Check your email for the verification link (check spam folder if needed)
-4. After verification, you can log in with your email and password
+This application requires several tables in your Supabase database. You'll need to set up:
 
-## Using the Trading Journal
+- users
+- journals
+- trades
+- trade_entries
+- trade_exits
+- trade_indicators
+- trade_screenshots
+- user_settings
 
-### Adding a Trade
+Detailed schema information can be found in supabase/migrations/001_initial_schema.sql
 
-1. Click the "Add Trade" button
-2. Fill in the trade details:
-   - Symbol (e.g., AAPL, TSLA)
-   - Direction (Long or Short)
-   - Entry Date and Price
-   - Quantity
-   - Strategy (optional)
-   - Tags (optional, comma-separated)
-   - Notes (optional)
-3. If the trade is closed, toggle "Trade Closed" and provide exit date and price
-4. Click "Add Trade" to save
+## Deployment
 
-### Editing or Deleting a Trade
+### Deploy with Vercel
 
-- To edit a trade, click the edit icon in the Actions column
-- To delete a trade, click the delete icon in the Actions column
+Click the "Deploy with Vercel" button at the top of this README to deploy your own instance of Trading Journal.
 
-### Viewing Trade Statistics
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLumca%2Ftrading-journal)
 
-The dashboard provides a summary of your trading performance:
-- Win rate
-- Total number of trades
-- Open positions
-- Total profit/loss
-- Largest win
-- Largest loss
+### Environment Variables
 
-## Customization Options
+Make sure to set the following environment variables in your Vercel project:
 
-### Theme
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-You can customize the application theme in `src/App.tsx` by modifying the theme object:
+## Contributing
 
-```typescript
-const theme = createTheme({
-  primaryColor: 'blue',  // Change to your preferred color
-  defaultRadius: 'md',
-  // Add more customizations here
-});
-```
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### Adding More Features
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Some ideas for extending the application:
-1. Trade filters and sorting
-2. Data visualization with charts
-3. Import/export functionality
-4. Position sizing calculator
-5. Trade journaling with image uploads
-6. Performance metrics by strategy, symbol, etc.
+## License
 
-## Troubleshooting
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-- **Authentication Issues**: Make sure your Supabase URL and anon key are correct
-- **Database Errors**: Check the SQL schema and ensure all tables and functions exist
-- **API Errors**: Check the browser console for specific error messages
+## Acknowledgments
 
-For more help, refer to the [Supabase documentation](https://supabase.com/docs) or the [Mantine documentation](https://mantine.dev/docs/getting-started/introduction/).
+- [Mantine UI](https://mantine.dev/) for the beautiful UI components
+- [Supabase](https://supabase.io/) for auth and database
+- [Recharts](https://recharts.org/) for the charting library

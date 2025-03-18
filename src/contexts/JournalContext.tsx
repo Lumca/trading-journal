@@ -69,7 +69,6 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     
     try {
       const journalsData = await getJournals();
-      console.log("Fetched journals:", journalsData);
       
       if (Array.isArray(journalsData)) {
         setJournals(journalsData);

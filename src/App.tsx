@@ -16,9 +16,12 @@ import {
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import { useDisclosure } from '@mantine/hooks';
+import { IconChevronDown } from '@tabler/icons-react';
+import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { JournalSelector } from './components/JournalSelector';
 import { Navigation } from './components/Navigation';
+import { ThemePicker } from './components/ThemePicker';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { JournalProvider } from './contexts/JournalContext';
 import { SupabaseProvider } from './contexts/SupabaseContext';
@@ -29,31 +32,9 @@ import { LoginPage } from './pages/LoginPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { StatisticsPage } from './pages/StatisticsPage';
 import { TradeDetailPage } from './pages/TradeDetailPage';
-import { IconChevronDown } from '@tabler/icons-react';
-
-// Define a custom theme with dark mode enabled by default
-const theme = createTheme({
-  fontFamily: 'Open Sans, sans-serif',
-  primaryColor: 'cyan',
-  colors: {
-      // override dark colors here to change them for all components
-      dark: [
-        '#d5d7e0',
-        '#acaebf',
-        '#8c8fa3',
-        '#666980',
-        '#4d4f66',
-        '#34354a',
-        '#2b2c3d',
-        '#1d1e30',
-        '#0c0d21',
-        '#01010a',
-      ],
-    },
-});
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
   const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
   const theme = useMantineTheme();
@@ -67,6 +48,7 @@ function AppContent() {
     if (path.startsWith('/statistics')) return 'statistics';
     if (path.startsWith('/calendar')) return 'calendar';
     if (path.startsWith('/settings')) return 'settings';
+    if (path.startsWith('/trades')) return 'dashboard'; // Trades detail counts as dashboard
     return 'dashboard';
   };
   
@@ -82,7 +64,7 @@ function AppContent() {
     }
   };
   
-  if (loading) {
+  if (authLoading) {
     return <div>Loading...</div>;
   }
   
@@ -100,80 +82,79 @@ function AppContent() {
       }}
       header={{ height: 60 }}
     >
-      // Modified AppShell.Header section for App.tsx
-
-<AppShell.Header>
-  <Group h="100%" px="md" style={{ justifyContent: 'space-between' }}>
-    <Group>
-      <Burger
-        opened={mobileOpened}
-        onClick={toggleMobile}
-        size="sm"
-        color={theme.colors.gray[6]}
-        hiddenFrom="sm"
-      />
-      <Burger
-        opened={desktopOpened}
-        onClick={toggleDesktop}
-        size="sm"
-        color={theme.colors.gray[6]}
-        visibleFrom="sm"
-      />
-      <Title order={3} size="h4" visibleFrom="xs" hiddenFrom="sm">TJ</Title>
-      <Title order={3} visibleFrom="sm">Trading Journal</Title>
-    </Group>
-    
-    {/* Mobile optimized right section */}
-    <Box>
-      <Group visibleFrom="md" spacing="md">
-        {/* Only show journal selector when logged in and on certain pages */}
-        {user && ['dashboard', 'journals', 'statistics', 'calendar'].includes(activeView) && (
-          <Box style={{ width: '200px' }}>
-            <JournalSelector />
-          </Box>
-        )}
-        {user && <Divider orientation="vertical" />}
-        {user && (
-          <Text size="sm" fw={500}>
-            {user.email}
-          </Text>
-        )}
-      </Group>
-      
-      {/* Mobile dropdown for Journal selector and user info */}
-      <Menu shadow="md" width={200} position="bottom-end" hiddenFrom="md">
-        <Menu.Target>
-          <ActionIcon variant="subtle">
-            <IconChevronDown size={18} />
-          </ActionIcon>
-        </Menu.Target>
-        
-        <Menu.Dropdown>
-          {user && ['dashboard', 'journals', 'statistics', 'calendar'].includes(activeView) && (
-            <>
-              <Menu.Label>Journal</Menu.Label>
-              <Box p="xs">
-                <JournalSelector />
-              </Box>
-              <Menu.Divider />
-            </>
-          )}
+      <AppShell.Header>
+        <Group h="100%" px="md" style={{ justifyContent: 'space-between' }}>
+          <Group>
+            <Burger
+              opened={mobileOpened}
+              onClick={toggleMobile}
+              size="sm"
+              color={theme.colors.gray[6]}
+              hiddenFrom="sm"
+            />
+            <Burger
+              opened={desktopOpened}
+              onClick={toggleDesktop}
+              size="sm"
+              color={theme.colors.gray[6]}
+              visibleFrom="sm"
+            />
+            <Title order={3} size="h4" visibleFrom="xs" hiddenFrom="sm">TJ</Title>
+            <Title order={3} visibleFrom="sm">Trading Journal</Title>
+          </Group>
           
-          {user && (
-            <>
-              <Menu.Label>User</Menu.Label>
-              <Menu.Item>
-                <Text size="sm" fw={500} style={{ wordBreak: 'break-all' }}>
+          <Group spacing="xs">
+            <ThemePicker /> {/* Theme picker added here */}
+            
+            <Group visibleFrom="md" spacing="md">
+              {/* Only show journal selector when logged in and on certain pages */}
+              {user && ['dashboard', 'journals', 'statistics', 'calendar'].includes(activeView) && (
+                <Box style={{ width: '200px' }}>
+                  <JournalSelector />
+                </Box>
+              )}
+              {user && <Divider orientation="vertical" />}
+              {user && (
+                <Text size="sm" fw={500}>
                   {user.email}
                 </Text>
-              </Menu.Item>
-            </>
-          )}
-        </Menu.Dropdown>
-      </Menu>
-    </Box>
-  </Group>
-</AppShell.Header>
+              )}
+            </Group>
+            
+            {/* Mobile dropdown for Journal selector and user info */}
+            <Menu shadow="md" width={200} position="bottom-end" hiddenFrom="md">
+              <Menu.Target>
+                <ActionIcon variant="subtle">
+                  <IconChevronDown size={18} />
+                </ActionIcon>
+              </Menu.Target>
+              
+              <Menu.Dropdown>
+                {user && ['dashboard', 'journals', 'statistics', 'calendar'].includes(activeView) && (
+                  <>
+                    <Menu.Label>Journal</Menu.Label>
+                    <Box p="xs">
+                      <JournalSelector />
+                    </Box>
+                    <Menu.Divider />
+                  </>
+                )}
+                
+                {user && (
+                  <>
+                    <Menu.Label>User</Menu.Label>
+                    <Menu.Item>
+                      <Text size="sm" fw={500} style={{ wordBreak: 'break-all' }}>
+                        {user.email}
+                      </Text>
+                    </Menu.Item>
+                  </>
+                )}
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        </Group>
+      </AppShell.Header>
 
       <AppShell.Navbar p="md">
         <Navigation
@@ -201,8 +182,34 @@ function AppContent() {
 }
 
 function App() {
+  // Create a theme with the saved primary color
+  const savedPrimaryColor = localStorage.getItem('trading-journal-primary-color') || 'cyan';
+  const savedTheme = localStorage.getItem('trading-journal-theme');
+  const initialColorScheme = savedTheme && savedTheme.startsWith('dark-') ? 'dark' : 'light';
+  
+  // Define your theme with the saved primary color
+  const theme = createTheme({
+    fontFamily: 'Open Sans, sans-serif',
+    primaryColor: savedPrimaryColor, // Use the saved primary color
+    colors: {
+      // override dark colors here to change them for all components
+      dark: [
+        '#d5d7e0',
+        '#acaebf',
+        '#8c8fa3',
+        '#666980',
+        '#4d4f66',
+        '#34354a',
+        '#2b2c3d',
+        '#1d1e30',
+        '#0c0d21',
+        '#01010a',
+      ],
+    },
+  });
+
   return (
-    <MantineProvider theme={theme} defaultColorScheme="dark">
+    <MantineProvider theme={theme} defaultColorScheme={initialColorScheme}>
       <BrowserRouter>
         <AuthProvider>
           <SupabaseProvider>

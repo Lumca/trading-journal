@@ -11,6 +11,10 @@ A comprehensive web application for traders to track and analyze their trading p
 - 🌓 Multiple themes with light and dark mode
 - 🔒 Secure authentication with Supabase
 
+## Screenshots
+![Dashboard](/img/dashboard.jpg?raw=true "Dashboard")
+Rest of the screenshots are in img folder
+
 ## Tech Stack
 
 - **Frontend**: React, TypeScript, Vite

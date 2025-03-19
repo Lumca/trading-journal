@@ -12,7 +12,8 @@ A comprehensive web application for traders to track and analyze their trading p
 - 🔒 Secure authentication with Supabase
 
 ## Screenshots
-![Dashboard](/img/dashboard.jpg?raw=true "Dashboard")
+![alt text](https://github.com/Lumca/trading-journal/blob/main/img/Dashboard.png "Dashboard")
+
 Rest of the screenshots are in img folder
 
 ## Tech Stack
